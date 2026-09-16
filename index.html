@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en" data-theme="system" data-layout="two-column">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7b500">
+  <meta name="description" content="Kite — lightweight, extensible PWA for exploring YAML documents." data-i18n-content="appDescription">
+  <title>Kite</title>
+  <link rel="manifest" href="./site.webmanifest">
+  <link rel="icon" href="./images/favicon.ico" sizes="any">
+  <link rel="icon" href="./images/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./images/apple-touch-icon.png">
+  <link rel="stylesheet" href="./css/app.css">
+</head>
+<body>
+  <button id="settingsButton" class="floating-menu-button no-print" type="button" aria-label="Open settings" data-i18n-aria-label="settingsOpen" aria-expanded="false">
+    <span id="settingsButtonIcon" class="settings-button-icon" aria-hidden="true">☰</span>
+    <span id="settingsNotificationBadge" class="notification-badge" aria-hidden="true" hidden>0</span>
+  </button>
+
+  <aside id="settingsPanel" class="settings-panel no-print" hidden aria-label="Kite settings" data-i18n-aria-label="settingsPanel">
+    <div class="settings-track">
+      <section class="setting-group" aria-labelledby="languageSettingLabel">
+        <span id="languageSettingLabel" class="setting-label" data-i18n="interfaceLanguage">Language</span>
+        <!-- Language choices are generated from js/i18n.js so locale metadata has a single source of truth. -->
+        <div id="languageOptions" class="settings-actions" role="group" aria-labelledby="languageSettingLabel"></div>
+      </section>
+      <section class="setting-group" aria-labelledby="themeSettingLabel">
+        <span id="themeSettingLabel" class="setting-label" data-i18n="theme">Theme</span>
+        <div class="settings-actions" role="group" aria-labelledby="themeSettingLabel">
+          <button class="secondary-button setting-option" type="button" data-theme-value="system" aria-pressed="false"><svg class="setting-option-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06-2.83 2.83-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V21h-4v-.08A1.7 1.7 0 0 0 8.96 19.36a1.7 1.7 0 0 0-1.87.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1.04H3v-4h.04A1.7 1.7 0 0 0 4.6 8.92a1.7 1.7 0 0 0-.34-1.87L4.2 6.99l2.83-2.83.06.06a1.7 1.7 0 0 0 1.87.34A1.7 1.7 0 0 0 10 3V3h4v.08a1.7 1.7 0 0 0 1.04 1.48 1.7 1.7 0 0 0 1.87-.34l.06-.06 2.83 2.83-.06.06a1.7 1.7 0 0 0-.34 1.87A1.7 1.7 0 0 0 20.96 10H21v4h-.04A1.7 1.7 0 0 0 19.4 15Z"/></svg><span data-i18n="themeSystem">System</span></button>
+          <button class="secondary-button setting-option" type="button" data-theme-value="light" aria-pressed="false"><svg class="setting-option-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"/></svg><span data-i18n="themeLight">Light</span></button>
+          <button class="secondary-button setting-option" type="button" data-theme-value="dark" aria-pressed="false"><svg class="setting-option-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 14.1A8.5 8.5 0 0 1 9.9 3.5 8.5 8.5 0 1 0 20.5 14.1Z"/></svg><span data-i18n="themeDark">Dark</span></button>
+        </div>
+      </section>
+      <section class="setting-group" aria-labelledby="layoutSettingLabel">
+        <span id="layoutSettingLabel" class="setting-label" data-i18n="layout">Layout</span>
+        <div class="settings-actions" role="group" aria-labelledby="layoutSettingLabel">
+          <button class="secondary-button setting-option" type="button" data-layout-value="two-column" aria-pressed="false"> <span data-i18n="layoutTwoColumns">2 columns</span></button>
+          <button class="secondary-button setting-option" type="button" data-layout-value="one-page" aria-pressed="false"> <span data-i18n="layoutOnePage">One page</span></button>
+        </div>
+      </section>
+      <section class="setting-group" aria-labelledby="statisticsSettingLabel">
+        <span id="statisticsSettingLabel" class="setting-label" data-i18n="statistics">Statistics</span>
+        <div class="settings-actions">
+          <button id="statisticsToggle" class="secondary-button setting-option" type="button" aria-pressed="false" data-i18n="show">Show</button>
+        </div>
+      </section>
+      <section class="setting-group" aria-labelledby="dataSettingLabel">
+        <span id="dataSettingLabel" class="setting-label" data-i18n="data">Data</span>
+        <div class="settings-actions">
+          <button id="importButton" class="secondary-button" type="button" aria-label="Import a YAML file" data-i18n-aria-label="importYaml">⇧ <span data-i18n="import">Import</span></button>
+          <button id="saveButton" class="secondary-button notification-button" type="button" aria-label="Save the YAML document" data-i18n-aria-label="saveYaml">⇩ <span data-i18n="save">Save</span><span id="saveNotificationBadge" class="notification-badge" aria-hidden="true" hidden>0</span></button>
+        </div>
+        <input id="fileInput" type="file" accept=".yml,.yaml,text/yaml,application/yaml" hidden>
+      </section>
+    </div>
+  </aside>
+
+  <div id="app" class="app-shell" aria-live="polite">
+    <main>
+      <header class="hero" aria-labelledby="documentTitle">
+        <div class="hero-copy">
+          <h1 id="documentTitle">Kite</h1>
+          <blockquote id="documentQuote" hidden></blockquote>
+        </div>
+        <div class="hero-tools no-print">
+          <label class="search-box" for="searchInput">
+            <input id="searchInput" type="search" autocomplete="off" placeholder="Search…" data-i18n-placeholder="search" aria-label="Search the document" data-i18n-aria-label="searchDocument">
+          </label>
+          <button id="addButton" class="add-button" type="button" aria-label="Add an item" data-i18n-aria-label="addItem" aria-expanded="false" hidden>+</button>
+        </div>
+        <div id="wizard" class="wizard no-print" hidden aria-label="Add an item" data-i18n-aria-label="addItem">
+          <form id="wizardForm" novalidate>
+            <div id="wizardTrack" class="wizard-track"></div>
+          </form>
+        </div>
+      </header>
+
+      <section class="content-shell">
+        <aside id="tagsPanel" class="tags-panel" aria-labelledby="tagsTitle">
+          <h2 id="tagsTitle" data-i18n="tags">Tags</h2>
+          <div id="tagsList" class="tags-list"></div>
+        </aside>
+        <section aria-label="Results" data-i18n-aria-label="results">
+          <div id="itemsList" class="items-list"></div>
+          <div id="emptyState" class="empty-state" hidden>
+            <strong data-i18n="noResults">No results</strong>
+            <span data-i18n="noResultsHint">Change the search or active filter.</span>
+          </div>
+        </section>
+      </section>
+    </main>
+    <footer><a href="https://github.com/Sylvain37/kite" target="_blank" rel="noopener">Kite · https://github.com/Sylvain37/kite · v0.5.3</a></footer>
+  </div>
+
+  <div id="toast" class="toast no-print" role="status" aria-live="polite" hidden></div>
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>

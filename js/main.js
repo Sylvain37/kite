@@ -1,0 +1,1428 @@
+import { createRuntime } from "./kernel/runtime.js";
+import { loadFoundationModules } from "./app/foundation-modules.js";
+import { DocumentPluginResolver, selectDocumentAdapter } from "./app/document-plugin-resolver.js";
+import { downloadText, fetchJson, fetchText, getFileExtension, readLocalFile } from "./platform/file-gateway.js";
+import { registerServiceWorker } from "./platform/pwa.js";
+import { currentLocale, localizeStaticDom, normalizeLocale, supportedLocales, t, translateTerm } from "./i18n.js";
+import { APP_QUOTE, APP_TITLE } from "./app/constants.js";
+import { escapeHtml, isHttpUrl, sanitizeImageUrl, sanitizeUrl } from "./shared/dom.js";
+
+/**
+ * Application controller: coordinates the kernel, adapters and DOM rendering.
+ * Domain-specific parsing stays in plugins; this module owns UI state and events.
+ */
+
+const runtime = createRuntime();
+const resolver = new DocumentPluginResolver(runtime);
+
+// Central mutable UI state. Business document state itself remains owned by adapters.
+const state = {
+  config: null,
+  adapter: null,
+  model: null,
+  view: null,
+  sections: [],
+  sectionAdapters: [],
+  activeSection: null,
+  sourceName: "document.yml",
+  selectedTag: null,
+  query: "",
+  showStatistics: false,
+  wizardStep: 0,
+  settingsNotificationCount: 0,
+  saveNotificationCount: 0
+};
+
+const elements = {
+  html: document.documentElement,
+  settingsButton: document.querySelector("#settingsButton"),
+  settingsButtonIcon: document.querySelector("#settingsButtonIcon"),
+  settingsNotificationBadge: document.querySelector("#settingsNotificationBadge"),
+  settingsPanel: document.querySelector("#settingsPanel"),
+  languageOptions: document.querySelector("#languageOptions"),
+  themeButtons: [...document.querySelectorAll("[data-theme-value]")],
+  layoutButtons: [...document.querySelectorAll("[data-layout-value]")],
+  statisticsToggle: document.querySelector("#statisticsToggle"),
+  importButton: document.querySelector("#importButton"),
+  saveButton: document.querySelector("#saveButton"),
+  saveNotificationBadge: document.querySelector("#saveNotificationBadge"),
+  fileInput: document.querySelector("#fileInput"),
+  title: document.querySelector("#documentTitle"),
+  quote: document.querySelector("#documentQuote"),
+  search: document.querySelector("#searchInput"),
+  addButton: document.querySelector("#addButton"),
+  wizard: document.querySelector("#wizard"),
+  wizardForm: document.querySelector("#wizardForm"),
+  wizardTrack: document.querySelector("#wizardTrack"),
+  tagsPanel: document.querySelector("#tagsPanel"),
+  tagsTitle: document.querySelector("#tagsTitle"),
+  tagsList: document.querySelector("#tagsList"),
+  itemsList: document.querySelector("#itemsList"),
+  emptyState: document.querySelector("#emptyState"),
+  toast: document.querySelector("#toast")
+};
+
+// ---- Preferences and foundation-driven UI options ---------------------------------
+
+function getStoredPreference(key, fallback) {
+  try {
+    return localStorage.getItem(key) || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function setStoredPreference(key, value) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+  }
+}
+
+/**
+ * Build the locale buttons from js/i18n.js instead of hard-coding language
+ * metadata into the document shell. This keeps locale availability, flag emoji
+ * and language names in one maintainable place.
+ */
+function renderLanguageOptions() {
+  elements.languageOptions.innerHTML = supportedLocales().map((locale) => `
+    <button class="secondary-button setting-option language-option" type="button"
+      data-locale-value="${escapeHtml(locale.code)}" aria-pressed="false" aria-label="${escapeHtml(locale.name)}">
+      <span class="language-option-flag" aria-hidden="true">${escapeHtml(locale.flag)}</span>
+      <span class="language-option-name" lang="${escapeHtml(locale.code)}">${escapeHtml(locale.name)}</span>
+    </button>`).join("");
+}
+
+/** Keep the visual and accessibility state of locale buttons in sync. */
+function syncLanguageOptions() {
+  const locale = currentLocale();
+  elements.languageOptions.querySelectorAll("[data-locale-value]").forEach((button) => {
+    const isActive = button.dataset.localeValue === locale;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  });
+}
+
+/**
+ * Capture in-progress wizard values before rebuilding translated wizard markup.
+ * Only enabled named controls participate, matching FormData and therefore the
+ * adapter payload that would be submitted by the user.
+ */
+function snapshotWizardForLocaleChange() {
+  if (elements.wizard.hidden) return null;
+  return {
+    step: state.wizardStep,
+    values: [...new FormData(elements.wizardForm).entries()].filter(([, value]) => (
+      typeof File === "undefined" || !(value instanceof File)
+    )),
+    illustrationName: elements.wizardForm.querySelector("#wizardIllustrationName")?.textContent ?? ""
+  };
+}
+
+/** Restore wizard values after its labels/placeholders have been retranslated. */
+function restoreWizardAfterLocaleChange(snapshot) {
+  if (!snapshot) return;
+
+  const typeValue = snapshot.values.find(([name]) => name === "type")?.[1];
+  const typeControl = elements.wizardForm.elements.namedItem("type");
+  if (typeControl && typeof typeValue === "string") typeControl.value = typeValue;
+  if (String(state.activeSection) === "cv") syncCvWizardType();
+
+  for (const [name, value] of snapshot.values) {
+    if (typeof value !== "string") continue;
+    const controls = [...elements.wizardForm.querySelectorAll(`[name="${name}"]`)];
+    const control = controls.find((candidate) => !candidate.disabled) ?? controls[0];
+    if (control) control.value = value;
+  }
+
+  const illustration = elements.wizardForm.querySelector("#wizardIllustrationData")?.value ?? "";
+  if (illustration) {
+    const preview = elements.wizardForm.querySelector("#wizardIllustrationPreview");
+    const image = preview?.querySelector("img");
+    const name = elements.wizardForm.querySelector("#wizardIllustrationName");
+    if (image) image.src = illustration;
+    if (name) name.textContent = snapshot.illustrationName;
+    if (preview) preview.hidden = false;
+  }
+
+  setWizardStep(snapshot.step);
+}
+
+/**
+ * Switch the whole interface locale and persist the preference. Static strings
+ * are translated in-place; dynamic cards, counters and the current wizard are
+ * rebuilt so a language change is immediate and does not require a reload.
+ */
+function applyLocale(locale, { persist = true, rerender = true } = {}) {
+  const value = normalizeLocale(locale);
+  const wizardSnapshot = rerender ? snapshotWizardForLocaleChange() : null;
+
+  elements.html.lang = value;
+  if (persist) setStoredPreference("kite.locale", value);
+
+  localizeStaticDom();
+  syncLanguageOptions();
+  elements.statisticsToggle.textContent = state.showStatistics ? t("hide") : t("show");
+  updateSettingsNotification();
+  updateSaveNotification();
+
+  // Rebuild adapter views instead of repainting the previous view object. Some
+  // adapters resolve semantic labels with t() while producing their normalised
+  // view, so rebuilding guarantees that titles such as Languages/Courses are
+  // regenerated in the newly selected locale rather than remaining stale.
+  if (rerender && state.view) refreshView();
+  if (wizardSnapshot) {
+    configureWizard();
+    restoreWizardAfterLocaleChange(wizardSnapshot);
+  }
+
+  runtime.emit("locale:changed", value);
+}
+
+function applyTheme(theme) {
+  const value = runtime.themes.has(theme) ? theme : state.config.defaults.theme;
+  elements.html.dataset.theme = value;
+  elements.themeButtons.forEach((button) => {
+    const isActive = button.dataset.themeValue === value;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  });
+  setStoredPreference("kite.theme", value);
+  runtime.emit("theme:changed", value);
+}
+
+function applyLayout(layout) {
+  const value = runtime.layouts.has(layout) ? layout : state.config.defaults.layout;
+  elements.html.dataset.layout = value;
+  elements.layoutButtons.forEach((button) => {
+    const isActive = button.dataset.layoutValue === value;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  });
+  setStoredPreference("kite.layout", value);
+  runtime.emit("layout:changed", value);
+}
+
+function applyStatisticsVisibility(enabled) {
+  state.showStatistics = Boolean(enabled);
+  elements.statisticsToggle.classList.toggle("is-active", state.showStatistics);
+  elements.statisticsToggle.setAttribute("aria-pressed", String(state.showStatistics));
+  elements.statisticsToggle.textContent = state.showStatistics ? t("hide") : t("show");
+  setStoredPreference("kite.statistics", state.showStatistics ? "true" : "false");
+  renderStatistics();
+}
+
+function codecForFilename(filename) {
+  const extension = getFileExtension(filename);
+  return runtime.codecs.values().find((codec) => codec.extensions?.includes(extension)) ?? null;
+}
+
+function declaredDocumentAdapters(documentObject, primaryAdapter) {
+  const declarations = Array.isArray(documentObject?.setup?.plugins) ? documentObject.setup.plugins : [];
+  const adapters = [];
+  const seen = new Set();
+
+  for (const declaration of declarations) {
+    const id = String(declaration?.name ?? "");
+    const adapter = runtime.documents.get(id);
+    const score = Number(adapter?.probe?.(documentObject) ?? 0);
+    if (!adapter || seen.has(adapter.id) || !Number.isFinite(score) || score <= 0) continue;
+    adapters.push(adapter);
+    seen.add(adapter.id);
+  }
+
+  if (!seen.has(primaryAdapter.id)) adapters.unshift(primaryAdapter);
+  return adapters;
+}
+
+// ---- Document loading and adapter selection ---------------------------------------
+
+async function loadParsedDocument(documentObject, sourceName) {
+  await resolver.loadDeclared(documentObject);
+  const adapter = selectDocumentAdapter(runtime, documentObject);
+  state.adapter = adapter;
+  state.sectionAdapters = declaredDocumentAdapters(documentObject, adapter);
+  state.model = adapter.load(documentObject);
+  state.sourceName = sourceName || "document.yml";
+  state.selectedTag = null;
+  state.query = "";
+  state.activeSection = null;
+  elements.search.value = "";
+  closeWizard();
+  refreshView();
+  runtime.emit("document:loaded", { adapter: adapter.id, sourceName: state.sourceName });
+}
+
+async function loadConfiguredDocument() {
+  const url = new URL(state.config.document, document.baseURI);
+  const codec = codecForFilename(url.pathname);
+  if (!codec) throw new Error(`No codec is available for ${url.pathname}.`);
+  const text = await fetchText(url.href);
+  const parsed = codec.parse(text);
+  await loadParsedDocument(parsed, url.pathname.split("/").pop() || "default.yml");
+}
+
+function refreshView() {
+  state.view = state.adapter.toView(state.model);
+  state.sections = state.sectionAdapters.map((adapter) => ({
+    id: adapter.id,
+    adapter,
+    view: adapter.id === state.adapter.id
+      ? state.view
+      : adapter.toView(adapter.load(state.model))
+  }));
+  render();
+}
+
+function setOptionalText(element, value) {
+  const text = String(value ?? "").trim();
+  element.textContent = text;
+  element.hidden = !text;
+}
+
+// ---- Search, filtering and contextual tags ----------------------------------------
+
+function normalizeSearchText(value) {
+  return String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
+function searchableItem(item) {
+  const canonicalValues = [
+    item.label,
+    ...(item.tags ?? []).map((tag) => tag.label),
+    ...(item.fields ?? []).flatMap((field) => [field.label, typeof field.value === "object" ? JSON.stringify(field.value) : field.value])
+  ];
+  const localizedValues = canonicalValues.map((value) => translateTerm(value));
+  return normalizeSearchText([...canonicalValues, ...localizedValues].join(" "));
+}
+
+function filteredItems(view = state.view) {
+  const query = normalizeSearchText(state.query.trim());
+  return (view?.items ?? []).filter((item) => {
+    const matchesTag = !state.selectedTag || (item.tags ?? []).some((tag) => String(tag.id) === String(state.selectedTag));
+    const matchesQuery = !query || searchableItem(item).includes(query);
+    return matchesTag && matchesQuery;
+  });
+}
+
+function activeSectionTags() {
+  const section = activeResultSection() ?? state.sections[0] ?? null;
+  if (!section) return [];
+
+  const usedTags = new Map();
+  for (const item of section.view?.items ?? []) {
+    for (const tag of item.tags ?? []) {
+      if (tag?.id == null) continue;
+      const id = String(tag.id);
+      const previous = usedTags.get(id);
+      if (!previous) {
+        usedTags.set(id, { ...tag, id });
+        continue;
+      }
+      const previousRate = Number(previous.rate);
+      const nextRate = Number(tag.rate);
+      if (Number.isFinite(nextRate) && (!Number.isFinite(previousRate) || nextRate > previousRate)) {
+        previous.rate = nextRate;
+      }
+    }
+  }
+
+  const tags = [];
+  const appended = new Set();
+  for (const catalogTag of section.view?.tags ?? []) {
+    if (catalogTag?.id == null) continue;
+    const id = String(catalogTag.id);
+    const usedTag = usedTags.get(id);
+    if (!usedTag) continue;
+    tags.push({ ...catalogTag, ...usedTag, id });
+    appended.add(id);
+  }
+  for (const [id, tag] of usedTags) {
+    if (!appended.has(id)) tags.push({ ...tag, id });
+  }
+  return tags;
+}
+
+function renderTags() {
+  const tags = activeSectionTags();
+  elements.tagsPanel.hidden = tags.length === 0;
+  elements.tagsList.innerHTML = tags.map((tag) => {
+    const active = String(tag.id) === String(state.selectedTag);
+    const rawRate = tag.rate;
+    const numericRate = rawRate == null || rawRate === "" ? NaN : Number(rawRate);
+    const hasRate = Number.isFinite(numericRate);
+    const rate = hasRate ? Math.max(0, Math.min(1, numericRate)) : 0;
+    const percent = Math.round(rate * 100);
+    const rateAttributes = hasRate
+      ? ` style="--tag-rate: ${percent}%" data-rate="${rate}" title="${escapeHtml(translateTerm(tag.label))} — ${percent}%" aria-label="${escapeHtml(translateTerm(tag.label))} — ${percent}%"`
+      : "";
+    return `<button class="tag-pill${active ? " is-active" : ""}" type="button" data-tag-id="${escapeHtml(tag.id)}" aria-pressed="${active}"${rateAttributes}><span>${escapeHtml(translateTerm(tag.label))}</span></button>`;
+  }).join("");
+}
+
+function statisticsData(section = activeResultSection()) {
+  if (!section) return null;
+
+  const sectionId = String(section.id);
+  const visibleItems = filteredItems(section.view);
+  const isCv = sectionId === "cv";
+  const hasStructuredCvExperiences = isCv && (section.view?.items ?? []).some((item) => item.cardType === "experience");
+  const sourceItems = hasStructuredCvExperiences
+    ? visibleItems.filter((item) => item.cardType === "experience")
+    : visibleItems;
+  const usage = new Map();
+
+  for (const item of sourceItems) {
+    const seen = new Set();
+    for (const tag of item.tags ?? []) {
+      if (tag?.id == null || seen.has(String(tag.id))) continue;
+      const id = String(tag.id);
+      seen.add(id);
+      const current = usage.get(id) ?? { id, label: translateTerm(String(tag.label ?? tag.id)), count: 0 };
+      current.count += 1;
+      usage.set(id, current);
+    }
+  }
+
+  const totalItems = sourceItems.length;
+  const entries = [...usage.values()]
+    .map((entry) => ({
+      ...entry,
+      percent: totalItems ? Math.round((entry.count / totalItems) * 100) : 0
+    }))
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, undefined, { sensitivity: "base" }))
+    .slice(0, 10);
+
+  return {
+    title: isCv ? t("skillUsage") : t("tagUsage"),
+    emptyLabel: isCv ? t("noSkillUsage") : t("noTagUsage"),
+    itemLabel: isCv ? t(totalItems === 1 ? "experienceSingular" : "experiencePlural") : t(totalItems === 1 ? "itemSingular" : "itemPlural"),
+    totalItems,
+    entries
+  };
+}
+
+function statisticsMarkup(section = activeResultSection()) {
+  if (!state.showStatistics) return "";
+  const data = statisticsData(section);
+  if (!data) return "";
+
+  const body = data.entries.length
+    ? `<div class="statistics-chart" role="list" aria-label="${escapeHtml(data.title)}">${data.entries.map((entry) => `
+        <div class="statistics-row" role="listitem">
+          <span class="statistics-label" title="${escapeHtml(entry.label)}">${escapeHtml(entry.label)}</span>
+          <span class="statistics-bar" aria-hidden="true"><span style="--statistics-value: ${entry.percent}%"></span></span>
+          <span class="statistics-value" aria-label="${escapeHtml(t("countOutOfTotal", { count: entry.count, total: data.totalItems, percent: entry.percent }))}">${entry.count} · ${entry.percent}%</span>
+        </div>`).join("")}
+      </div>`
+    : `<p class="statistics-empty">${escapeHtml(data.emptyLabel)}</p>`;
+
+  return `<section id="statisticsPanel" class="statistics-panel no-print" aria-labelledby="statisticsTitle">
+    <div class="statistics-heading">
+      <h3 id="statisticsTitle">${escapeHtml(data.title)}</h3>
+      <span>${data.totalItems} ${escapeHtml(data.itemLabel)}</span>
+    </div>
+    ${body}
+  </section>`;
+}
+
+function renderStatistics() {
+  const current = elements.itemsList.querySelector("#statisticsPanel");
+  const markup = statisticsMarkup();
+
+  if (!markup) {
+    current?.remove();
+    return;
+  }
+
+  const template = document.createElement("template");
+  template.innerHTML = markup.trim();
+  const next = template.content.firstElementChild;
+  if (!next) return;
+
+  if (current) {
+    current.replaceWith(next);
+    return;
+  }
+
+  const tabs = elements.itemsList.querySelector(".result-tabs");
+  if (tabs) tabs.insertAdjacentElement("afterend", next);
+  else elements.itemsList.prepend(next);
+}
+
+function displayValue(value) {
+  if (value == null) return "";
+  if (Array.isArray(value)) return value.map(displayValue).filter(Boolean).join(", ");
+  if (typeof value === "object") return JSON.stringify(value);
+  return translateTerm(String(value));
+}
+
+// ---- Generic and CV-aware rendering ------------------------------------------------
+
+const FIELD_SYMBOLS = {
+  duration: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2h2v2h6V2h2v2h3v18H4V4h3V2Zm11 8H6v10h12V10ZM6 8h12V6h-1v1h-2V6H9v1H7V6H6v2Zm5 4h2v4.2l2.6 1.5-1 1.7-3.6-2.1V12Z"/></svg>`,
+  location: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s6-5.4 6-12a6 6 0 1 0-12 0c0 6.6 6 12 6 12Zm0-9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5Z"/></svg>`,
+  kind: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6a2 2 0 0 1 2 2v1h4v13H3V7h4V6a2 2 0 0 1 2-2Zm6 3V6H9v1h6Zm4 5H5v6h14v-6Zm0-3H5v1h14V9Z"/></svg>`,
+  format: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v13H3V4Zm2 2v9h14V6H5Zm4 13h6v2H9v-2Z"/></svg>`,
+  phone: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.2 3.5 4.6 4.7c-.8.4-1.2 1.3-1 2.2 1.5 6.8 6.7 12 13.5 13.5.9.2 1.8-.2 2.2-1l1.2-2.6c.4-.8.1-1.8-.7-2.3l-3-1.7c-.7-.4-1.6-.3-2.2.3l-1.3 1.3a13.2 13.2 0 0 1-3.7-3.7l1.3-1.3c.6-.6.7-1.5.3-2.2l-1.7-3c-.5-.8-1.5-1.1-2.3-.7Z"/></svg>`,
+  email: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v14H3V5Zm2 2v.3l7 5.2 7-5.2V7H5Zm14 10V9.8l-7 5.2-7-5.2V17h14Z"/></svg>`,
+  linkedin: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.3 3.8A2.3 2.3 0 1 1 5.3 8.4a2.3 2.3 0 0 1 0-4.6ZM3.4 9.8h3.8V21H3.4V9.8Zm6.1 0h3.6v1.5h.1c.5-.9 1.7-1.9 3.6-1.9 3.8 0 4.5 2.5 4.5 5.8V21h-3.8v-5.1c0-1.2 0-2.8-1.7-2.8s-2 1.3-2 2.7V21H9.5V9.8Z"/></svg>`,
+  link: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 14.5 14.5 9l1.5 1.4-5 5.5-1.5-1.4Zm-4.8 3.8a4 4 0 0 1 0-5.7l3-3a4 4 0 0 1 5.7 0l.6.6-1.4 1.4-.6-.6a2 2 0 0 0-2.9 0l-3 3a2 2 0 1 0 2.9 2.9l1.1-1.1 1.4 1.4-1.1 1.1a4 4 0 0 1-5.7 0Zm6-4.5-.6-.6 1.4-1.4.6.6a2 2 0 0 0 2.9 0l3-3A2 2 0 1 0 15.1 6l-1.1 1-1.4-1.4 1.1-1.1a4 4 0 0 1 5.7 5.7l-3 3a4 4 0 0 1-5.7 0Z"/></svg>`
+};
+
+function renderFieldLabel(field, label, labelClass = "") {
+  const symbol = FIELD_SYMBOLS[field.icon];
+  const classes = [symbol ? "field-symbol" : "", labelClass].filter(Boolean).join(" ");
+  const classAttribute = classes ? ` class="${escapeHtml(classes)}"` : "";
+  if (!symbol) return `<dt${classAttribute}>${label}</dt>`;
+  return `<dt${classAttribute} title="${label}" aria-label="${label}">${symbol}</dt>`;
+}
+
+function renderItemTag(tag, showRate) {
+  const label = escapeHtml(translateTerm(tag.label));
+  const numericRate = tag.rate == null || tag.rate === "" ? NaN : Number(tag.rate);
+  const hasRate = showRate && Number.isFinite(numericRate);
+  if (!hasRate) return `<span class="item-tag">${label}</span>`;
+
+  const rate = Math.max(0, Math.min(1, numericRate));
+  const percent = Math.round(rate * 100);
+  return `<span class="item-tag has-rate" style="--tag-rate: ${percent}%" data-rate="${rate}" title="${label} — ${percent}%" aria-label="${label} — ${percent}%"><span>${label}</span></span>`;
+}
+
+function renderInlineContactField(field) {
+  const label = escapeHtml(translateTerm(field.label ?? field.key ?? ""));
+  const value = displayValue(field.value);
+  const type = field.type ?? "text";
+  const symbol = FIELD_SYMBOLS[field.icon];
+  let rendered;
+
+  if (type === "email") {
+    const url = sanitizeUrl(`mailto:${value}`);
+    rendered = url ? `<a href="${escapeHtml(url)}">${escapeHtml(value)}</a>` : `<span>${escapeHtml(value)}</span>`;
+  } else if (type === "phone") {
+    const url = sanitizeUrl(`tel:${value}`);
+    rendered = url ? `<a href="${escapeHtml(url)}">${escapeHtml(value)}</a>` : `<span>${escapeHtml(value)}</span>`;
+  } else if (type === "url") {
+    const url = sanitizeUrl(value);
+    rendered = url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(value)}</a>` : `<span>${escapeHtml(value)}</span>`;
+  } else {
+    rendered = `<span>${escapeHtml(value)}</span>`;
+  }
+
+  const icon = symbol
+    ? `<span class="profile-contact-symbol" title="${label}" aria-hidden="true">${symbol}</span>`
+    : "";
+  return `<span class="profile-contact-item" aria-label="${label}: ${escapeHtml(value)}">${icon}${rendered}</span>`;
+}
+
+function renderInlineContactFields(fields) {
+  return fields.map((field, index) => {
+    const separator = index > 0 ? `<span class="profile-contact-separator" aria-hidden="true">&middot;</span>` : "";
+    return `${separator}${renderInlineContactField(field)}`;
+  }).join("");
+}
+
+function renderField(field, labelClass = "") {
+  const label = escapeHtml(translateTerm(field.label ?? field.key ?? ""));
+  const value = displayValue(field.value);
+  const type = field.type ?? "text";
+  let rendered;
+
+  if (type === "rating") {
+    const score = Math.max(0, Math.min(5, Number(field.value) || 0));
+    const rounded = Math.round(score);
+    rendered = `<span class="rating" aria-label="${escapeHtml(t("ratingOutOfFive", { score }))}">${"★".repeat(rounded)}${"☆".repeat(5 - rounded)}</span>`;
+  } else if (type === "ratio") {
+    const rate = Math.max(0, Math.min(1, Number(field.value) || 0));
+    const percent = Math.round(rate * 100);
+    rendered = `<span class="ratio" aria-label="${percent}%">${percent}%</span>`;
+  } else if (type === "image") {
+    const url = sanitizeImageUrl(value);
+    rendered = url ? `<img class="field-image" src="${escapeHtml(url)}" alt="${label}">` : `<span>${escapeHtml(value)}</span>`;
+  } else if (type === "email") {
+    const url = sanitizeUrl(`mailto:${value}`);
+    rendered = url ? `<a href="${escapeHtml(url)}">${escapeHtml(value)}</a>` : `<span>${escapeHtml(value)}</span>`;
+  } else if (type === "phone") {
+    const url = sanitizeUrl(`tel:${value}`);
+    rendered = url ? `<a href="${escapeHtml(url)}">${escapeHtml(value)}</a>` : `<span>${escapeHtml(value)}</span>`;
+  } else if (type === "url") {
+    const url = sanitizeUrl(value);
+    rendered = url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(value)}</a>` : `<span>${escapeHtml(value)}</span>`;
+  } else if (field.courseMeta) {
+    rendered = renderCourseMeta(field.courseMeta) || `<span>${escapeHtml(value)}</span>`;
+  } else {
+    rendered = `<span>${escapeHtml(value)}</span>`;
+  }
+
+  const hasSymbol = Boolean(FIELD_SYMBOLS[field.icon]);
+  const isCourse = Boolean(field.courseMeta);
+  return `<div class="field${hasSymbol ? " has-symbol" : ""}">${renderFieldLabel(field, label, labelClass)}<dd${isCourse ? ' class="course-meta"' : ""}>${rendered}</dd></div>`;
+}
+
+function experienceDateParts(value) {
+  const text = String(value ?? "").trim();
+  let match = text.match(/^(\d{4})(?:[\/-](\d{1,2}))?$/);
+  let year;
+  let month;
+
+  if (match) {
+    year = Number(match[1]);
+    month = match[2] == null ? 1 : Number(match[2]);
+  } else {
+    match = text.match(/^(\d{1,2})[\/-](\d{4})$/);
+    if (!match) return null;
+    month = Number(match[1]);
+    year = Number(match[2]);
+  }
+
+  if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) return null;
+  return { year, month };
+}
+
+function experienceMonthIndex(value) {
+  const date = experienceDateParts(value);
+  return date ? date.year * 12 + date.month - 1 : null;
+}
+
+function formatExperienceStartDate(value) {
+  const date = experienceDateParts(value);
+  if (!date) return String(value ?? "").trim();
+  const instant = new Date(Date.UTC(date.year, date.month - 1, 1));
+  return new Intl.DateTimeFormat(currentLocale(), { month: "short", year: "numeric", timeZone: "UTC" }).format(instant);
+}
+
+function formatExperienceDuration(startDate, finishDate) {
+  const start = String(startDate ?? "").trim();
+  const finish = String(finishDate ?? "").trim();
+  if (!start) return "";
+  if (translateTerm(finish, "en").toLowerCase() === "now") return t("sinceDate", { date: formatExperienceStartDate(start) });
+
+  const startMonth = experienceMonthIndex(start);
+  const finishMonth = experienceMonthIndex(finish);
+  if (startMonth == null || finishMonth == null || finishMonth < startMonth) {
+    return finish ? `${start} – ${finish}` : start;
+  }
+
+  const months = finishMonth - startMonth;
+  if (months < 1) return t("lessThanMonth");
+  if (months < 12) return `${months} ${t(months === 1 ? "monthSingular" : "monthPlural")}`;
+
+  const years = Math.floor(months / 12);
+  const remainingMonths = months % 12;
+  const yearLabel = `${years} ${t(years === 1 ? "yearSingular" : "yearPlural")}`;
+  const monthLabel = `${remainingMonths} ${t(remainingMonths === 1 ? "monthSingular" : "monthPlural")}`;
+  return remainingMonths ? `${yearLabel} ${monthLabel}` : yearLabel;
+}
+
+function renderExperienceMetaItem(icon, label, value) {
+  const text = translateTerm(String(value ?? "").trim());
+  if (!text) return "";
+  const symbol = FIELD_SYMBOLS[icon] ?? "";
+  return `<span class="experience-meta-item" aria-label="${escapeHtml(label)} : ${escapeHtml(text)}"><span class="experience-meta-symbol" aria-hidden="true">${symbol}</span><span>${escapeHtml(text)}</span></span>`;
+}
+
+function renderMetaEntries(entries) {
+  return entries.filter(Boolean).map((entry, index) => {
+    const separator = index ? `<span class="experience-meta-separator" aria-hidden="true">&middot;</span>` : "";
+    return `${separator}${entry}`;
+  }).join("");
+}
+
+function renderExperienceMeta(experience) {
+  return renderMetaEntries([
+    renderExperienceMetaItem("duration", t("duration"), formatExperienceDuration(experience.startDate, experience.finishDate)),
+    renderExperienceMetaItem("location", t("location"), experience.location),
+    renderExperienceMetaItem("kind", t("type"), translateTerm(experience.kind)),
+    renderExperienceMetaItem("format", t("format"), translateTerm(experience.format))
+  ]);
+}
+
+function renderCourseMeta(courseMeta) {
+  const entries = renderMetaEntries([
+    renderExperienceMetaItem("duration", t("date"), courseMeta?.date),
+    renderExperienceMetaItem("location", t("location"), courseMeta?.location)
+  ]);
+  return entries ? `<span class="experience-meta-line course-meta-line">${entries}</span>` : "";
+}
+
+function renderAchievementText(value) {
+  return escapeHtml(translateTerm(value))
+    .replace(/&lt;b&gt;/gi, "<b>")
+    .replace(/&lt;\/b&gt;/gi, "</b>");
+}
+
+function isIllustrationField(field) {
+  return field?.type === "image" && normalizeSearchText(field?.key).replace(/[\s_-]/g, "") === "illustration";
+}
+
+function renderIllustrationFields(fields) {
+  return fields.filter(isIllustrationField).map((field) => {
+    const url = sanitizeImageUrl(displayValue(field.value));
+    const alt = translateTerm(field.label ?? "illustration");
+    return url
+      ? `<img class="card-illustration" src="${escapeHtml(url)}" alt="${escapeHtml(alt)}">`
+      : "";
+  }).join("");
+}
+
+function renderProfileCard(item, section) {
+  const link = sanitizeUrl(item.link);
+  const heading = link
+    ? `<a href="${escapeHtml(link)}" target="_blank" rel="noopener">${escapeHtml(translateTerm(item.label))}</a>`
+    : escapeHtml(translateTerm(item.label));
+  const tags = item.displayTags === false
+    ? ""
+    : (item.tags ?? []).map((tag) => renderItemTag(tag, item.displayTagRates === true)).join("");
+  const itemFields = item.fields ?? [];
+  const illustration = renderIllustrationFields(itemFields);
+  const contentFields = itemFields.filter((field) => !isIllustrationField(field));
+  const inlineContact = renderInlineContactFields(contentFields);
+  const remove = typeof section?.adapter?.remove === "function"
+    ? `<button class="remove-button no-print" type="button" data-remove-id="${escapeHtml(item.id)}" data-remove-plugin="${escapeHtml(section.id)}" aria-label="${escapeHtml(t("removeItem", { label: translateTerm(item.label) }))}">×</button>`
+    : "";
+  const profileTitle = item.profileTitle == null || item.profileTitle === ""
+    ? ""
+    : `<span class="profile-heading-separator" aria-hidden="true">&middot;</span><span class="profile-heading-title">${escapeHtml(translateTerm(item.profileTitle))}</span>`;
+  const profileQuote = item.profileQuote == null || item.profileQuote === ""
+    ? ""
+    : `<div class="profile-quote">${escapeHtml(translateTerm(item.profileQuote))}</div>`;
+
+  return `<article class="item-card profile-card">
+    <div class="card-heading">
+      <div class="card-heading-main profile-heading-main">
+        ${illustration}
+        <div class="profile-heading-copy">
+          <h3>${heading}${profileTitle}</h3>
+          ${inlineContact ? `<div class="profile-contact-line profile-heading-contact" aria-label="${escapeHtml(t("contactDetails"))}">${inlineContact}</div>` : ""}
+        </div>
+      </div>
+      ${remove}
+    </div>
+    ${profileQuote}
+    ${tags ? `<div class="item-tags">${tags}</div>` : ""}
+  </article>`;
+}
+
+function renderExperienceCard(item, section) {
+  const experience = item.experience ?? {};
+  const title = translateTerm(String(experience.title ?? item.label ?? ""));
+  const organization = translateTerm(String(experience.organization ?? "").trim());
+  const link = sanitizeUrl(item.link);
+  const titleMarkup = link
+    ? `<a href="${escapeHtml(link)}" target="_blank" rel="noopener">${escapeHtml(title)}</a>`
+    : escapeHtml(title);
+  const heading = organization
+    ? `<span class="experience-organization">${escapeHtml(organization)}</span><span class="experience-heading-separator" aria-hidden="true">&middot;</span><span class="experience-title">${titleMarkup}</span>`
+    : `<span class="experience-title">${titleMarkup}</span>`;
+  const illustrationURL = sanitizeImageUrl(experience.illustration);
+  const illustration = illustrationURL
+    ? `<img class="card-illustration" src="${escapeHtml(illustrationURL)}" alt="${escapeHtml(organization || title)}">`
+    : "";
+  const remove = typeof section?.adapter?.remove === "function"
+    ? `<button class="remove-button no-print" type="button" data-remove-id="${escapeHtml(item.id)}" data-remove-plugin="${escapeHtml(section.id)}" aria-label="${escapeHtml(t("removeItem", { label: translateTerm(item.label) }))}">×</button>`
+    : "";
+  const meta = renderExperienceMeta(experience);
+  const tags = item.displayTags === false
+    ? ""
+    : (item.tags ?? []).map((tag) => renderItemTag(tag, item.displayTagRates === true)).join("");
+  const subtitle = translateTerm(String(experience.subtitle ?? "").trim());
+  const achievements = Array.isArray(experience.achievements)
+    ? experience.achievements.map((achievement) => `<li>${renderAchievementText(achievement)}</li>`).join("")
+    : "";
+
+  return `<article class="item-card">
+    <div class="card-heading">
+      <div class="card-heading-main experience-heading-main">
+        ${illustration}
+        <div class="experience-heading-copy">
+          <h3>${heading}</h3>
+          ${meta ? `<div class="experience-meta-line">${meta}</div>` : ""}
+        </div>
+      </div>
+      ${remove}
+    </div>
+    ${tags ? `<div class="item-tags">${tags}</div>` : ""}
+    ${subtitle ? `<p class="experience-subtitle">${escapeHtml(subtitle)}</p>` : ""}
+    ${achievements ? `<ul class="experience-achievements">${achievements}</ul>` : ""}
+  </article>`;
+}
+
+function renderItem(item, section) {
+  if (item.cardType === "experience") return renderExperienceCard(item, section);
+  if (item.cardType === "profile") return renderProfileCard(item, section);
+
+  const link = sanitizeUrl(item.link);
+  const heading = link
+    ? `<a href="${escapeHtml(link)}" target="_blank" rel="noopener">${escapeHtml(translateTerm(item.label))}</a>`
+    : escapeHtml(translateTerm(item.label));
+  const tags = item.displayTags === false
+    ? ""
+    : (item.tags ?? []).map((tag) => renderItemTag(tag, item.displayTagRates === true)).join("");
+  const itemFields = item.fields ?? [];
+  const illustration = renderIllustrationFields(itemFields);
+  const contentFields = itemFields.filter((field) => !isIllustrationField(field));
+  const inlineContact = item.fieldsLayout === "inline-contact"
+    ? renderInlineContactFields(contentFields)
+    : "";
+  const fields = item.fieldsLayout === "inline-contact"
+    ? ""
+    : contentFields.map((field) => renderField(field, item.fieldLabelClass ?? "")).join("");
+  const remove = typeof section?.adapter?.remove === "function"
+    ? `<button class="remove-button no-print" type="button" data-remove-id="${escapeHtml(item.id)}" data-remove-plugin="${escapeHtml(section.id)}" aria-label="${escapeHtml(t("removeItem", { label: translateTerm(item.label) }))}">×</button>`
+    : "";
+  const profileTitle = item.profileTitle == null || item.profileTitle === ""
+    ? ""
+    : `<div class="profile-title">${escapeHtml(translateTerm(item.profileTitle))}</div>`;
+  const profileQuote = item.profileQuote == null || item.profileQuote === ""
+    ? ""
+    : `<div class="profile-quote">${escapeHtml(translateTerm(item.profileQuote))}</div>`;
+
+  return `<article class="item-card">
+    <div class="card-heading">
+      <div class="card-heading-main">${illustration}<h3>${heading}</h3></div>
+      ${remove}
+    </div>
+    ${profileTitle}
+    ${profileQuote}
+    ${tags ? `<div class="item-tags">${tags}</div>` : ""}
+    ${inlineContact ? `<div class="profile-contact-line" aria-label="${escapeHtml(t("contactDetails"))}">${inlineContact}</div>` : ""}
+    ${fields ? `<dl class="fields">${fields}</dl>` : ""}
+  </article>`;
+}
+
+// ---- Multi-adapter result sections -------------------------------------------------
+
+function sectionDomSuffix(id) {
+  const words = String(id).split(/[^a-zA-Z0-9]+/).filter(Boolean);
+  const suffix = words.map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join("");
+  return suffix || "Document";
+}
+
+function activeResultSection() {
+  return state.sections.find((section) => String(section.id) === String(state.activeSection)) ?? null;
+}
+
+function activeResultAdapter() {
+  return activeResultSection()?.adapter ?? null;
+}
+
+function syncContextualTools() {
+  const section = activeResultSection();
+  const sectionId = section ? String(section.id) : "";
+  const canAdd = typeof section?.adapter?.add === "function";
+  const sectionName = translateTerm(sectionId);
+  const searchLabel = sectionId ? t("searchSection", { section: sectionName }) : t("searchDocument");
+
+  elements.search.placeholder = sectionId ? t("searchSectionPlaceholder", { section: sectionName }) : t("search");
+  elements.search.setAttribute("aria-label", searchLabel);
+  elements.addButton.hidden = !canAdd;
+  elements.wizard.setAttribute("aria-label", sectionId ? t("addItemSection", { section: sectionName }) : t("addItem"));
+
+  if (elements.wizard.hidden) {
+    elements.addButton.textContent = "+";
+    elements.addButton.setAttribute("aria-label", sectionId ? t("addItemSection", { section: sectionName }) : t("addItem"));
+    elements.addButton.setAttribute("aria-expanded", "false");
+  }
+}
+
+function selectResultSection(id, { focus = false } = {}) {
+  const sectionId = String(id ?? "");
+  if (!state.sections.some((section) => String(section.id) === sectionId)) return;
+
+  const sectionChanged = String(state.activeSection) !== sectionId;
+  const hadSelectedTag = state.selectedTag != null;
+  if (sectionChanged && !elements.wizard.hidden) closeWizard();
+  if (sectionChanged) state.selectedTag = null;
+  state.activeSection = sectionId;
+
+  if (sectionChanged && hadSelectedTag) {
+    renderItems();
+    if (focus) elements.itemsList.querySelector(`[data-result-tab="${CSS.escape(sectionId)}"]`)?.focus();
+  } else {
+    const tabs = [...elements.itemsList.querySelectorAll("[role=\"tab\"]")];
+    const panels = [...elements.itemsList.querySelectorAll("[role=\"tabpanel\"]")];
+
+    tabs.forEach((tab) => {
+      const isActive = tab.dataset.resultTab === sectionId;
+      tab.classList.toggle("is-active", isActive);
+      tab.setAttribute("aria-selected", String(isActive));
+      tab.tabIndex = isActive ? 0 : -1;
+      if (isActive && focus) tab.focus();
+    });
+
+    panels.forEach((panel) => {
+      panel.hidden = panel.dataset.pluginSection !== sectionId;
+    });
+  }
+
+  renderTags();
+  renderStatistics();
+  syncContextualTools();
+}
+
+function renderItems() {
+  let totalCount = 0;
+  const tabs = [];
+  const sections = [];
+  const sectionIds = state.sections.map((section) => String(section.id));
+  const activeSection = sectionIds.includes(String(state.activeSection))
+    ? String(state.activeSection)
+    : (sectionIds[0] ?? null);
+  state.activeSection = activeSection;
+
+  for (const section of state.sections) {
+    const sectionId = String(section.id);
+    const items = filteredItems(section.view);
+    const count = items.length;
+    totalCount += count;
+
+    const domSuffix = sectionDomSuffix(sectionId);
+    const tabId = `resultsTab${domSuffix}`;
+    const panelId = `resultsSection${domSuffix}`;
+    const isActive = sectionId === activeSection;
+    const countLabel = `${count} ${t(count === 1 ? "itemSingular" : "itemPlural")}`;
+
+    tabs.push(`<button id="${escapeHtml(tabId)}" class="result-tab${isActive ? " is-active" : ""}" type="button" role="tab" aria-selected="${isActive}" aria-controls="${escapeHtml(panelId)}" tabindex="${isActive ? "0" : "-1"}" data-result-tab="${escapeHtml(sectionId)}">
+      <span>${escapeHtml(translateTerm(sectionId))}</span>
+      <span class="result-tab-count" aria-label="${escapeHtml(countLabel)}">${count}</span>
+    </button>`);
+
+    const resultsCount = sectionId === "bookmarks" || sectionId === "cv"
+      ? ""
+      : `<p class="results-count">${countLabel}</p>`;
+
+    sections.push(`<section id="${escapeHtml(panelId)}" class="result-section" role="tabpanel" tabindex="0" data-plugin-section="${escapeHtml(sectionId)}" aria-labelledby="${escapeHtml(tabId)}"${isActive ? "" : " hidden"}>
+      <h3 class="result-section-title result-section-print-title">${escapeHtml(translateTerm(sectionId))}</h3>
+      ${resultsCount}
+      <div class="result-section-items">${items.map((item) => renderItem(item, section)).join("")}</div>
+    </section>`);
+  }
+
+  const tabList = tabs.length
+    ? `<div class="result-tabs no-print" role="tablist" aria-label="${escapeHtml(t("resultSections"))}">${tabs.join("")}</div>`
+    : "";
+  const statistics = statisticsMarkup(state.sections.find((section) => String(section.id) === activeSection) ?? null);
+  elements.itemsList.innerHTML = `${tabList}${statistics}${sections.join("")}`;
+  elements.emptyState.hidden = totalCount > 0;
+}
+
+function render() {
+  if (!state.view) return;
+  document.title = APP_TITLE;
+  elements.title.textContent = APP_TITLE;
+  setOptionalText(elements.quote, translateTerm(APP_QUOTE));
+  renderItems();
+  renderTags();
+  syncContextualTools();
+}
+
+function toggleTag(id) {
+  state.selectedTag = String(state.selectedTag) === String(id) ? null : id;
+  renderTags();
+  renderItems();
+}
+
+function prefersReducedMotion() {
+  return matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+// ---- Guided add-item wizard ---------------------------------------------------------
+
+function wizardStepMarkup(label, body, hint = t("continueWithEnter")) {
+  return `<div class="wizard-step"><label>${label}</label>${body}<small>${hint}</small></div>`;
+}
+
+function bookmarksWizardMarkup() {
+  return [
+    wizardStepMarkup(t("bookmarkLabelPrompt"), '<input id="wizardLabel" name="label" type="text" autocomplete="off" required placeholder="Ex. MDN Web Docs">'),
+    wizardStepMarkup(t("bookmarkUrlPrompt"), '<input id="wizardUrl" name="url" type="url" inputmode="url" autocomplete="url" required placeholder="https://…">'),
+    wizardStepMarkup(t("bookmarkTagsPrompt"), '<input id="wizardTags" name="tags" type="text" autocomplete="off" placeholder="web, docs, pwa">', t("addWithEnter"))
+  ].join("");
+}
+
+function cvWizardMarkup() {
+  return [
+    wizardStepMarkup(t("cvItemType"), `<select id="wizardType" name="type" required>
+      <option value="language">${escapeHtml(t("language"))}</option>
+      <option value="course">${escapeHtml(t("course"))}</option>
+      <option value="experience">${escapeHtml(t("experience"))}</option>
+    </select>`),
+    wizardStepMarkup(t("mainInformation"), `
+      <div class="wizard-field-group" data-cv-type="language">
+        <input name="label" type="text" autocomplete="off" required placeholder="${escapeHtml(t("languagePlaceholder"))}">
+      </div>
+      <div class="wizard-field-group" data-cv-type="course" hidden>
+        <input name="label" type="text" autocomplete="off" required placeholder="${escapeHtml(t("coursePlaceholder"))}">
+        <input name="date" type="text" autocomplete="off" placeholder="${escapeHtml(t("datePlaceholder"))}">
+        <input name="location" type="text" autocomplete="off" placeholder="${escapeHtml(t("providerLocationPlaceholder"))}">
+      </div>
+      <div class="wizard-field-group" data-cv-type="experience" hidden>
+        <input name="title" type="text" autocomplete="off" required placeholder="${escapeHtml(t("experienceTitlePlaceholder"))}">
+        <input name="organization" type="text" autocomplete="off" placeholder="${escapeHtml(t("organizationPlaceholder"))}">
+        <input name="subtitle" type="text" autocomplete="off" placeholder="${escapeHtml(t("shortDescriptionPlaceholder"))}">
+      </div>`),
+    wizardStepMarkup(t("additionalInformation"), `
+      <div class="wizard-field-group" data-cv-type="language">
+        <input name="rate" type="number" min="0" max="100" step="1" inputmode="numeric" placeholder="${escapeHtml(t("levelPercentPlaceholder"))}">
+      </div>
+      <div class="wizard-field-group" data-cv-type="course" hidden>
+        <input name="rate" type="number" min="0" max="100" step="1" inputmode="numeric" placeholder="${escapeHtml(t("scorePercentPlaceholder"))}">
+      </div>
+      <div class="wizard-field-group" data-cv-type="experience" hidden>
+        <input name="kind" type="text" autocomplete="off" placeholder="${escapeHtml(t("experienceKindPlaceholder"))}">
+        <input name="format" type="text" autocomplete="off" placeholder="${escapeHtml(t("experienceFormatPlaceholder"))}">
+        <input name="location" type="text" autocomplete="off" placeholder="${escapeHtml(t("locationPlaceholder"))}">
+        <div class="wizard-inline-fields">
+          <input name="startDate" type="text" autocomplete="off" placeholder="${escapeHtml(t("startPlaceholder"))}">
+          <input name="finishDate" type="text" autocomplete="off" placeholder="${escapeHtml(t("finishPlaceholder"))}">
+        </div>
+        <input name="skills" type="text" autocomplete="off" placeholder="${escapeHtml(t("skillsPlaceholder"))}">
+        <textarea name="achievements" rows="2" placeholder="${escapeHtml(t("achievementsPlaceholder"))}"></textarea>
+        <div class="wizard-upload-field">
+          <input id="wizardIllustrationInput" type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" hidden>
+          <input id="wizardIllustrationData" name="illustration" type="hidden">
+          <button id="wizardIllustrationDropzone" class="wizard-upload-zone" type="button">
+            <span class="wizard-upload-title">${escapeHtml(t("experienceIllustration"))}</span>
+            <span class="wizard-upload-copy">${escapeHtml(t("illustrationDropHint"))}</span>
+            <span class="wizard-upload-formats">${escapeHtml(t("imageFormats"))}</span>
+          </button>
+          <div id="wizardIllustrationPreview" class="wizard-upload-preview" hidden>
+            <img alt="${escapeHtml(t("experienceIllustrationPreview"))}">
+            <span id="wizardIllustrationName"></span>
+            <button id="wizardIllustrationRemove" class="wizard-upload-remove" type="button" aria-label="${escapeHtml(t("removeIllustration"))}">×</button>
+          </div>
+        </div>
+      </div>`, t("addWithEnter"))
+  ].join("");
+}
+
+const CV_EXPERIENCE_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const CV_EXPERIENCE_IMAGE_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp"]);
+
+function isAllowedCvExperienceImage(file) {
+  if (!(file instanceof File)) return false;
+  const extension = file.name.includes(".") ? file.name.split(".").pop().toLowerCase() : "";
+  return CV_EXPERIENCE_IMAGE_TYPES.has(file.type) || CV_EXPERIENCE_IMAGE_EXTENSIONS.has(extension);
+}
+
+function readFileAsDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => resolve(String(reader.result ?? "")), { once: true });
+    reader.addEventListener("error", () => reject(reader.error || new Error(t("imageReadFailed"))), { once: true });
+    reader.readAsDataURL(file);
+  });
+}
+
+function resetCvExperienceIllustration() {
+  const input = elements.wizardForm.querySelector("#wizardIllustrationInput");
+  const data = elements.wizardForm.querySelector("#wizardIllustrationData");
+  const preview = elements.wizardForm.querySelector("#wizardIllustrationPreview");
+  const dropzone = elements.wizardForm.querySelector("#wizardIllustrationDropzone");
+  if (input) input.value = "";
+  if (data) data.value = "";
+  if (preview) {
+    preview.hidden = true;
+    const image = preview.querySelector("img");
+    if (image) image.removeAttribute("src");
+  }
+  const name = elements.wizardForm.querySelector("#wizardIllustrationName");
+  if (name) name.textContent = "";
+  dropzone?.classList.remove("is-dragover");
+}
+
+async function setCvExperienceIllustration(file) {
+  if (!isAllowedCvExperienceImage(file)) {
+    resetCvExperienceIllustration();
+    showToast(t("unsupportedImage"), true);
+    return;
+  }
+
+  try {
+    const dataURL = await readFileAsDataURL(file);
+    if (!/^data:image\/(?:png|jpe?g|webp);base64,/i.test(dataURL)) {
+      throw new Error(t("unsupportedImageFormat"));
+    }
+    const data = elements.wizardForm.querySelector("#wizardIllustrationData");
+    const preview = elements.wizardForm.querySelector("#wizardIllustrationPreview");
+    const dropzone = elements.wizardForm.querySelector("#wizardIllustrationDropzone");
+    const name = elements.wizardForm.querySelector("#wizardIllustrationName");
+    if (!data || !preview) return;
+    data.value = dataURL;
+    const image = preview.querySelector("img");
+    if (image) image.src = dataURL;
+    if (name) name.textContent = file.name;
+    preview.hidden = false;
+    dropzone?.classList.remove("is-dragover");
+  } catch (error) {
+    resetCvExperienceIllustration();
+    showToast(error?.message || t("imageLoadFailed"), true);
+  }
+}
+
+function syncCvWizardType() {
+  const type = elements.wizardForm.elements.namedItem("type")?.value || "language";
+  elements.wizardForm.querySelectorAll("[data-cv-type]").forEach((group) => {
+    const active = group.dataset.cvType === type;
+    group.hidden = !active;
+    group.querySelectorAll("input, select, textarea").forEach((control) => { control.disabled = !active; });
+  });
+}
+
+function configureWizard() {
+  const sectionId = String(state.activeSection ?? "");
+  elements.wizardTrack.innerHTML = sectionId === "cv" ? cvWizardMarkup() : bookmarksWizardMarkup();
+  if (sectionId === "cv") syncCvWizardType();
+}
+
+function visibleWizardStep(step = state.wizardStep) {
+  return elements.wizardTrack.children[step] ?? null;
+}
+
+function focusWizardStep(step) {
+  const control = visibleWizardStep(step)?.querySelector("input:not([disabled]), select:not([disabled]), textarea:not([disabled])");
+  const delay = prefersReducedMotion() ? 0 : 340;
+  setTimeout(() => control?.focus(), delay);
+}
+
+function setWizardStep(step) {
+  const count = Math.max(1, elements.wizardTrack.children.length);
+  state.wizardStep = Math.max(0, Math.min(count - 1, step));
+  elements.wizardTrack.style.width = `${count * 100}%`;
+  [...elements.wizardTrack.children].forEach((child) => { child.style.width = `${100 / count}%`; });
+  elements.wizardTrack.style.transform = `translateX(-${state.wizardStep * (100 / count)}%)`;
+  if (!elements.wizard.hidden) {
+    elements.addButton.textContent = state.wizardStep > 0 ? "↩" : "×";
+    elements.addButton.setAttribute("aria-label", state.wizardStep > 0 ? t("previousStep") : t("cancelAdd"));
+  }
+  focusWizardStep(state.wizardStep);
+}
+
+function openWizard() {
+  const adapter = activeResultAdapter();
+  if (typeof adapter?.add !== "function") return;
+  configureWizard();
+  elements.addButton.classList.add("is-cancel");
+  elements.addButton.textContent = "×";
+  elements.addButton.setAttribute("aria-label", t("cancelAdd"));
+  elements.addButton.setAttribute("aria-expanded", "true");
+  elements.wizardForm.reset();
+  if (String(state.activeSection) === "cv") syncCvWizardType();
+  elements.wizard.hidden = false;
+  void elements.wizard.offsetHeight;
+  elements.wizard.classList.add("is-open");
+  setWizardStep(0);
+}
+
+function closeWizard() {
+  elements.wizard.classList.remove("is-open");
+  elements.wizard.hidden = true;
+  elements.addButton.classList.remove("is-cancel");
+  elements.addButton.textContent = "+";
+  elements.addButton.setAttribute("aria-label", t("addItem"));
+  elements.addButton.setAttribute("aria-expanded", "false");
+  state.wizardStep = 0;
+  elements.wizardTrack.style.transform = "translateX(0)";
+  syncContextualTools();
+}
+
+function validateWizardStep() {
+  const step = visibleWizardStep();
+  if (!step) return true;
+  for (const control of step.querySelectorAll("input:not([disabled]), select:not([disabled]), textarea:not([disabled])")) {
+    if (control.type === "url" && control.required && control.value.trim() && !isHttpUrl(control.value)) {
+      control.setCustomValidity(t("invalidHttpUrl"));
+    } else {
+      control.setCustomValidity("");
+    }
+    if (!control.checkValidity()) {
+      control.reportValidity();
+      control.focus();
+      return false;
+    }
+  }
+  return true;
+}
+
+function getWizardValues() {
+  return Object.fromEntries(new FormData(elements.wizardForm).entries());
+}
+
+// ---- Unsaved-change notifications --------------------------------------------------
+
+function updateSettingsNotification() {
+  const count = Math.max(0, Number(state.settingsNotificationCount) || 0);
+  elements.settingsNotificationBadge.textContent = count > 99 ? "99+" : String(count);
+  elements.settingsNotificationBadge.hidden = count === 0;
+
+  const open = !elements.settingsPanel.hidden;
+  const baseLabel = open ? t("settingsClose") : t("settingsOpen");
+  const notificationLabel = !open && count > 0
+    ? t("settingsChanges", { count, item: t(count === 1 ? "itemSingular" : "itemPlural"), suffix: count > 1 ? "s" : "", plural: count > 1 ? "s" : "" })
+    : "";
+  elements.settingsButton.setAttribute("aria-label", `${baseLabel}${notificationLabel}`);
+}
+
+function updateSaveNotification() {
+  const count = Math.max(0, Number(state.saveNotificationCount) || 0);
+  elements.saveNotificationBadge.textContent = count > 99 ? "99+" : String(count);
+  elements.saveNotificationBadge.hidden = count === 0;
+
+  const notificationLabel = count > 0
+    ? t("saveChanges", { count, item: t(count === 1 ? "itemSingular" : "itemPlural"), suffix: count > 1 ? "s" : "", plural: count > 1 ? "s" : "" })
+    : "";
+  elements.saveButton.setAttribute("aria-label", `${t("saveYaml")}${notificationLabel}`);
+}
+
+function incrementChangeNotifications() {
+  state.settingsNotificationCount += 1;
+  state.saveNotificationCount += 1;
+  updateSettingsNotification();
+  updateSaveNotification();
+}
+
+function clearChangeNotifications() {
+  if (state.settingsNotificationCount === 0 && state.saveNotificationCount === 0) return;
+  state.settingsNotificationCount = 0;
+  state.saveNotificationCount = 0;
+  updateSettingsNotification();
+  updateSaveNotification();
+}
+
+function submitWizardStep() {
+  if (!validateWizardStep()) return;
+  const count = Math.max(1, elements.wizardTrack.children.length);
+  if (state.wizardStep < count - 1) {
+    if (String(state.activeSection) === "cv" && state.wizardStep === 0) syncCvWizardType();
+    setWizardStep(state.wizardStep + 1);
+    return;
+  }
+
+  const adapter = activeResultAdapter();
+  if (typeof adapter?.add !== "function") {
+    closeWizard();
+    return;
+  }
+
+  try {
+    adapter.add(state.model, getWizardValues());
+    incrementChangeNotifications();
+    closeWizard();
+    refreshView();
+    runtime.emit("document:changed", { operation: "add", plugin: adapter.id });
+  } catch (error) {
+    showToast(error?.message || String(error), true);
+  }
+}
+
+let toastTimer = null;
+function showToast(message, isError = false) {
+  clearTimeout(toastTimer);
+  elements.toast.textContent = message;
+  elements.toast.classList.toggle("is-error", isError);
+  elements.toast.hidden = false;
+  toastTimer = setTimeout(() => { elements.toast.hidden = true; }, 3600);
+}
+
+async function importDocument(file) {
+  const codec = codecForFilename(file.name);
+  if (!codec) throw new Error(t("unsupportedYaml"));
+  const text = await readLocalFile(file);
+  const parsed = codec.parse(text);
+  await loadParsedDocument(parsed, file.name);
+  showToast(t("importedFile", { name: file.name }));
+}
+
+function saveDocument() {
+  if (!state.adapter || !state.model) return;
+  const codec = runtime.codecs.get("yaml");
+  const serialized = state.adapter.serialize(state.model);
+  const text = codec.stringify(serialized);
+  const base = state.sourceName.replace(/\.(?:ya?ml)$/i, "") || "document";
+  downloadText(text, `${base}-export.yml`);
+  clearChangeNotifications();
+  showToast(t("yamlSaveReady"));
+}
+
+function toggleSettings(force) {
+  const open = typeof force === "boolean" ? force : elements.settingsPanel.hidden;
+
+  if (open) {
+    elements.settingsPanel.hidden = false;
+    elements.settingsPanel.classList.remove("is-opening");
+    void elements.settingsPanel.offsetWidth;
+    elements.settingsPanel.classList.add("is-opening");
+  } else {
+    elements.settingsPanel.hidden = true;
+    elements.settingsPanel.classList.remove("is-opening");
+  }
+
+  elements.settingsButton.classList.toggle("is-cancel", open);
+  elements.settingsButtonIcon.textContent = open ? "×" : "☰";
+  elements.settingsButton.setAttribute("aria-expanded", String(open));
+  updateSettingsNotification();
+}
+
+// ---- DOM events and application bootstrap -----------------------------------------
+
+function bindEvents() {
+  elements.settingsButton.addEventListener("click", () => toggleSettings());
+  elements.languageOptions.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-locale-value]");
+    if (button) applyLocale(button.dataset.localeValue);
+  });
+  elements.themeButtons.forEach((button) => {
+    button.addEventListener("click", () => applyTheme(button.dataset.themeValue));
+  });
+  elements.layoutButtons.forEach((button) => {
+    button.addEventListener("click", () => applyLayout(button.dataset.layoutValue));
+  });
+  elements.statisticsToggle.addEventListener("click", () => applyStatisticsVisibility(!state.showStatistics));
+  elements.importButton.addEventListener("click", () => elements.fileInput.click());
+  elements.saveButton.addEventListener("click", saveDocument);
+  elements.fileInput.addEventListener("change", async () => {
+    const [file] = elements.fileInput.files;
+    elements.fileInput.value = "";
+    if (!file) return;
+    try {
+      await importDocument(file);
+      toggleSettings(false);
+    } catch (error) {
+      console.error(error);
+      showToast(error.message || t("importFailed"), true);
+    }
+  });
+
+  elements.search.addEventListener("input", () => {
+    state.query = elements.search.value;
+    renderItems();
+  });
+
+  elements.tagsList.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-tag-id]");
+    if (button) toggleTag(button.dataset.tagId);
+  });
+
+  elements.itemsList.addEventListener("click", (event) => {
+    const tab = event.target.closest("[data-result-tab]");
+    if (tab) {
+      selectResultSection(tab.dataset.resultTab);
+      return;
+    }
+
+    const button = event.target.closest("[data-remove-id]");
+    if (!button) return;
+    const adapter = runtime.documents.get(button.dataset.removePlugin);
+    if (typeof adapter?.remove !== "function") return;
+    const removed = adapter.remove(state.model, button.dataset.removeId);
+    if (removed) {
+      refreshView();
+      runtime.emit("document:changed", { operation: "remove", plugin: adapter.id });
+    }
+  });
+
+  elements.itemsList.addEventListener("keydown", (event) => {
+    const currentTab = event.target.closest("[role=\"tab\"]");
+    if (!currentTab) return;
+
+    const tabs = [...elements.itemsList.querySelectorAll("[role=\"tab\"]")];
+    const currentIndex = tabs.indexOf(currentTab);
+    if (currentIndex < 0) return;
+
+    let nextIndex = null;
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") nextIndex = (currentIndex + 1) % tabs.length;
+    if (event.key === "ArrowLeft" || event.key === "ArrowUp") nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+    if (event.key === "Home") nextIndex = 0;
+    if (event.key === "End") nextIndex = tabs.length - 1;
+    if (nextIndex == null) return;
+
+    event.preventDefault();
+    selectResultSection(tabs[nextIndex].dataset.resultTab, { focus: true });
+  });
+
+  elements.addButton.addEventListener("click", () => {
+    if (elements.wizard.hidden) openWizard();
+    else if (state.wizardStep > 0) setWizardStep(state.wizardStep - 1);
+    else closeWizard();
+  });
+
+  elements.wizardForm.addEventListener("submit", (event) => event.preventDefault());
+  elements.wizardForm.addEventListener("input", (event) => {
+    if (event.target?.setCustomValidity) event.target.setCustomValidity("");
+  });
+  elements.wizardForm.addEventListener("change", (event) => {
+    if (event.target?.name === "type" && String(state.activeSection) === "cv") syncCvWizardType();
+    if (event.target?.id === "wizardIllustrationInput") {
+      const file = event.target.files?.[0];
+      if (file) void setCvExperienceIllustration(file);
+    }
+  });
+  elements.wizardForm.addEventListener("click", (event) => {
+    if (event.target.closest("#wizardIllustrationDropzone")) {
+      elements.wizardForm.querySelector("#wizardIllustrationInput")?.click();
+      return;
+    }
+    if (event.target.closest("#wizardIllustrationRemove")) resetCvExperienceIllustration();
+  });
+  elements.wizardForm.addEventListener("dragover", (event) => {
+    const dropzone = event.target.closest("#wizardIllustrationDropzone");
+    if (!dropzone) return;
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+    dropzone.classList.add("is-dragover");
+  });
+  elements.wizardForm.addEventListener("dragleave", (event) => {
+    const dropzone = event.target.closest("#wizardIllustrationDropzone");
+    if (!dropzone || dropzone.contains(event.relatedTarget)) return;
+    dropzone.classList.remove("is-dragover");
+  });
+  elements.wizardForm.addEventListener("drop", (event) => {
+    const dropzone = event.target.closest("#wizardIllustrationDropzone");
+    if (!dropzone) return;
+    event.preventDefault();
+    dropzone.classList.remove("is-dragover");
+    const file = event.dataTransfer?.files?.[0];
+    if (file) void setCvExperienceIllustration(file);
+  });
+  elements.wizardForm.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" || event.shiftKey) return;
+    if (!event.target.matches("input, select, textarea")) return;
+    event.preventDefault();
+    submitWizardStep();
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    if (!elements.wizard.hidden) closeWizard();
+    else if (!elements.settingsPanel.hidden) toggleSettings(false);
+  });
+
+  document.addEventListener("click", (event) => {
+    if (elements.settingsPanel.hidden) return;
+    if (elements.settingsPanel.contains(event.target) || elements.settingsButton.contains(event.target)) return;
+    toggleSettings(false);
+  });
+}
+
+async function start() {
+  renderLanguageOptions();
+  applyLocale(getStoredPreference("kite.locale", currentLocale()), { persist: false, rerender: false });
+  bindEvents();
+  updateSettingsNotification();
+  updateSaveNotification();
+  state.config = await fetchJson("./config/kite.json");
+  await loadFoundationModules(runtime, state.config.foundation);
+
+  applyTheme(getStoredPreference("kite.theme", state.config.defaults.theme));
+  applyLayout(getStoredPreference("kite.layout", state.config.defaults.layout));
+  applyStatisticsVisibility(getStoredPreference("kite.statistics", "false") === "true");
+
+  await loadConfiguredDocument();
+  await registerServiceWorker();
+}
+
+start().catch((error) => {
+  console.error(error);
+  elements.itemsList.innerHTML = `<div class="fatal-error"><strong>${escapeHtml(t("startupFailedTitle"))}</strong><p>${escapeHtml(error.message || error)}</p></div>`;
+  showToast(error.message || t("startupFailed"), true);
+});

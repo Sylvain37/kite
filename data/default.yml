@@ -1,0 +1,115 @@
+setup:
+  plugins:
+    - name: bookmarks
+      version: 1.0.0
+    - name: cv
+      version: 1.0.0
+data:
+  bookmarks:
+    - id: 1
+      label: World Wide Web — first website
+      link: https://info.cern.ch/
+      tags:
+        - 1
+        - 2
+    - id: 2
+      label: MDN Web Docs — Progressive Web Apps
+      link: https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps
+      tags:
+        - 2
+        - 3
+  cv:
+    firstName: Camille
+    lastName: EXAMPLE
+    title: Cloud Platform Architect
+    quote: I design resilient platforms that make delivery simpler, safer and observable
+    location: Nantes, FR
+    phone: +33 6 00 00 00 00
+    email: camille@example.com
+    social:
+      - id: 5
+        link: https://example.com/camille
+    illustration: data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiB2aWV3Qm94PSIwIDAgNTEyIDUxMiI+CjxyZWN0IHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiByeD0iNjQiIGZpbGw9IiMyZDQwNTkiLz4KPGNpcmNsZSBjeD0iMjU2IiBjeT0iMTkwIiByPSI5MiIgZmlsbD0iI2ZmZmZmZiIgb3BhY2l0eT0iMC45MiIvPgo8cGF0aCBkPSJNOTYgNDU0YzE4LTEwMCA4MS0xNTQgMTYwLTE1NHMxNDIgNTQgMTYwIDE1NCIgZmlsbD0iI2ZmZmZmZiIgb3BhY2l0eT0iMC45MiIvPgo8dGV4dCB4PSIyNTYiIHk9IjIwNSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InN5c3RlbS11aSxzYW5zLXNlcmlmIiBmb250LXNpemU9IjU0IiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjMmQ0MDU5Ij5DRTwvdGV4dD4KPHRleHQgeD0iMjU2IiB5PSI0ODYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJzeXN0ZW0tdWksc2Fucy1zZXJpZiIgZm9udC1zaXplPSIyMiIgZmlsbD0iI2ZmZmZmZiI+ZmljdGlvbmFsIHByb2ZpbGU8L3RleHQ+Cjwvc3ZnPg==
+    languages:
+      - id: 0
+        rate: 1
+      - id: 4
+        rate: 0.8
+    courses:
+      - id: 6
+        rate: 1
+        date: 2022
+        location: Example Academy
+      - id: 7
+        rate: 1
+        date: 2024
+        location: Demo Institute
+    experiences:
+      - title: Platform Engineer
+        subtitle: Build and operate a shared delivery platform for product teams
+        kind: permanent contract
+        format: hybrid
+        organization: Acme Cloud Studio
+        illustration: data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiB2aWV3Qm94PSIwIDAgNTEyIDUxMiI+CjxyZWN0IHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiByeD0iNjQiIGZpbGw9IiMzYTUwNmIiLz4KPGNpcmNsZSBjeD0iMjU2IiBjeT0iMTkwIiByPSI5MiIgZmlsbD0iI2ZmZmZmZiIgb3BhY2l0eT0iMC45MiIvPgo8cGF0aCBkPSJNOTYgNDU0YzE4LTEwMCA4MS0xNTQgMTYwLTE1NHMxNDIgNTQgMTYwIDE1NCIgZmlsbD0iI2ZmZmZmZiIgb3BhY2l0eT0iMC45MiIvPgo8dGV4dCB4PSIyNTYiIHk9IjIwNSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InN5c3RlbS11aSxzYW5zLXNlcmlmIiBmb250LXNpemU9IjU0IiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjM2E1MDZiIj5QRTwvdGV4dD4KPHRleHQgeD0iMjU2IiB5PSI0ODYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJzeXN0ZW0tdWksc2Fucy1zZXJpZiIgZm9udC1zaXplPSIyMiIgZmlsbD0iI2ZmZmZmZiI+ZGVtbyBleHBlcmllbmNlPC90ZXh0Pgo8L3N2Zz4=
+        location: Nantes
+        startDate: 2020/03
+        finishDate: 2023/08
+        achievements:
+          - Standardise infrastructure provisioning with reusable modules and automated policy checks
+          - Introduce service-level objectives and dashboards for critical platform services
+          - Reduce deployment friction by creating documented self-service delivery workflows
+        employedSkills:
+          - id: 8
+            rate: 0.7
+          - id: 9
+            rate: 1
+          - id: 11
+            rate: 0.8
+      - title: Cloud Platform Architect
+        subtitle: Architecture and enablement for secure cloud-native delivery
+        kind: self-employed
+        format: hybrid
+        organization: Example Platform Cooperative
+        illustration: data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiB2aWV3Qm94PSIwIDAgNTEyIDUxMiI+CjxyZWN0IHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiByeD0iNjQiIGZpbGw9IiM0ZjVkNzUiLz4KPGNpcmNsZSBjeD0iMjU2IiBjeT0iMTkwIiByPSI5MiIgZmlsbD0iI2ZmZmZmZiIgb3BhY2l0eT0iMC45MiIvPgo8cGF0aCBkPSJNOTYgNDU0YzE4LTEwMCA4MS0xNTQgMTYwLTE1NHMxNDIgNTQgMTYwIDE1NCIgZmlsbD0iI2ZmZmZmZiIgb3BhY2l0eT0iMC45MiIvPgo8dGV4dCB4PSIyNTYiIHk9IjIwNSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InN5c3RlbS11aSxzYW5zLXNlcmlmIiBmb250LXNpemU9IjU0IiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjNGY1ZDc1Ij5DQTwvdGV4dD4KPHRleHQgeD0iMjU2IiB5PSI0ODYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJzeXN0ZW0tdWksc2Fucy1zZXJpZiIgZm9udC1zaXplPSIyMiIgZmlsbD0iI2ZmZmZmZiI+ZGVtbyBleHBlcmllbmNlPC90ZXh0Pgo8L3N2Zz4=
+        location: Nantes
+        startDate: 2023/09
+        finishDate: now
+        achievements:
+          - Design reference architectures for containerised applications and shared platform services
+          - Facilitate threat-modelling and architecture reviews with product and security teams
+          - Create migration playbooks and coaching material for teams adopting the platform
+          - Define observability and reliability standards for services moving into production
+        employedSkills:
+          - id: 10
+            rate: 1
+          - id: 11
+            rate: 0.8
+          - id: 12
+            rate: 0.6
+  tags:
+    - id: 0
+      label: French
+    - id: 1
+      label: CERN
+    - id: 2
+      label: WWW
+    - id: 3
+      label: PWA
+    - id: 4
+      label: English
+    - id: 5
+      label: Portfolio
+    - id: 6
+      label: Cloud Architecture Certificate
+    - id: 7
+      label: Secure Delivery Practitioner
+    - id: 8
+      label: Platform engineering
+    - id: 9
+      label: Infrastructure as code
+    - id: 10
+      label: Cloud architecture
+    - id: 11
+      label: Observability
+    - id: 12
+      label: DevSecOps

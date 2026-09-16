@@ -1,0 +1,24 @@
+{
+  "document": "./data/default.yml",
+  "foundation": [
+    {
+      "id": "org.kite.codec.yaml",
+      "kind": "codec",
+      "module": "./js/extensions/codecs/yaml/plugin.js"
+    },
+    {
+      "id": "org.kite.theme.core",
+      "kind": "theme",
+      "module": "./js/extensions/themes/core/plugin.js"
+    },
+    {
+      "id": "org.kite.layout.core",
+      "kind": "layout",
+      "module": "./js/extensions/layouts/core/plugin.js"
+    }
+  ],
+  "defaults": {
+    "theme": "system",
+    "layout": "two-column"
+  }
+}
