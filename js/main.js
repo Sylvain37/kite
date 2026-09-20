@@ -3,9 +3,10 @@ import { loadFoundationModules } from "./app/foundation-modules.js";
 import { DocumentPluginResolver, selectDocumentAdapter } from "./app/document-plugin-resolver.js";
 import { downloadText, fetchJson, fetchText, getFileExtension, readLocalFile } from "./platform/file-gateway.js";
 import { registerServiceWorker } from "./platform/pwa.js";
+import { loadStylesheet } from "./platform/stylesheet.js";
 import { currentLocale, localizeStaticDom, normalizeLocale, supportedLocales, t, translateTerm } from "./i18n.js";
 import { APP_QUOTE, APP_TITLE } from "./app/constants.js";
-import { escapeHtml, isLinkUrl, sanitizeImageUrl, sanitizeUrl } from "./shared/dom.js";
+import { escapeHtml, sanitizeImageUrl, sanitizeUrl } from "./shared/dom.js";
 
 /**
  * Application controller: coordinates the kernel, adapters and DOM rendering.
@@ -71,6 +72,30 @@ const elements = {
   emptyState: document.querySelector("#emptyState"),
   toast: document.querySelector("#toast")
 };
+
+let wizardController = null;
+let wizardLoading = null;
+
+async function ensureWizardController() {
+  if (!wizardLoading) {
+    wizardLoading = Promise.all([
+      import("./app/wizard.js"),
+      loadStylesheet("./css/wizard.css", "feature:wizard")
+    ]).then(([module]) => {
+      wizardController = module.createWizardController({
+        elements, state, runtime, activeContentAdapter, syncContextualTools,
+        incrementChangeNotifications, refreshView, showToast
+      });
+      return wizardController;
+    }).catch((error) => {
+      wizardLoading = null;
+      throw error;
+    });
+  }
+  return wizardLoading;
+}
+
+function closeWizard() { wizardController?.close(); }
 
 // ---- Preferences and foundation-driven UI options ---------------------------------
 
@@ -141,58 +166,13 @@ function syncLanguageOptions() {
 }
 
 /**
- * Capture in-progress wizard values before rebuilding translated wizard markup.
- * Only enabled named controls participate, matching FormData and therefore the
- * adapter payload that would be submitted by the user.
- */
-function snapshotWizardForLocaleChange() {
-  if (elements.wizard.hidden) return null;
-  return {
-    step: state.wizardStep,
-    values: [...new FormData(elements.wizardForm).entries()].filter(([, value]) => (
-      typeof File === "undefined" || !(value instanceof File)
-    )),
-    illustrationName: elements.wizardForm.querySelector("#wizardIllustrationName")?.textContent ?? ""
-  };
-}
-
-/** Restore wizard values after its labels/placeholders have been retranslated. */
-function restoreWizardAfterLocaleChange(snapshot) {
-  if (!snapshot) return;
-
-  const typeValue = snapshot.values.find(([name]) => name === "type")?.[1];
-  const typeControl = elements.wizardForm.elements.namedItem("type");
-  if (typeControl && typeof typeValue === "string") typeControl.value = typeValue;
-  if (String(state.activeSection) === "cv") syncCvWizardType();
-
-  for (const [name, value] of snapshot.values) {
-    if (typeof value !== "string") continue;
-    const controls = [...elements.wizardForm.querySelectorAll(`[name="${name}"]`)];
-    const control = controls.find((candidate) => !candidate.disabled) ?? controls[0];
-    if (control) control.value = value;
-  }
-
-  const illustration = elements.wizardForm.querySelector("#wizardIllustrationData")?.value ?? "";
-  if (illustration) {
-    const preview = elements.wizardForm.querySelector("#wizardIllustrationPreview");
-    const image = preview?.querySelector("img");
-    const name = elements.wizardForm.querySelector("#wizardIllustrationName");
-    if (image) image.src = illustration;
-    if (name) name.textContent = snapshot.illustrationName;
-    if (preview) preview.hidden = false;
-  }
-
-  setWizardStep(snapshot.step);
-}
-
-/**
  * Switch the whole interface locale and persist the preference. Static strings
  * are translated in-place; dynamic cards, counters and the current wizard are
  * rebuilt so a language change is immediate and does not require a reload.
  */
 function applyLocale(locale, { persist = true, rerender = true } = {}) {
   const value = normalizeLocale(locale);
-  const wizardSnapshot = rerender ? snapshotWizardForLocaleChange() : null;
+  const wizardSnapshot = rerender ? wizardController?.snapshot() : null;
 
   elements.html.lang = value;
   if (persist) setStoredPreference("kite.locale", value);
@@ -210,10 +190,7 @@ function applyLocale(locale, { persist = true, rerender = true } = {}) {
   // view, so rebuilding guarantees that titles such as Languages/Courses are
   // regenerated in the newly selected locale rather than remaining stale.
   if (rerender && state.view) refreshView();
-  if (wizardSnapshot) {
-    configureWizard();
-    restoreWizardAfterLocaleChange(wizardSnapshot);
-  }
+  if (wizardSnapshot) wizardController.restore(wizardSnapshot);
 
   runtime.emit("locale:changed", value);
 }
@@ -230,9 +207,14 @@ function syncBrowserThemeColor() {
   if (color) elements.themeColorMeta?.setAttribute("content", color);
 }
 
-function applyTheme(theme, mode = elements.html.dataset.themeMode, { persist = true } = {}) {
+let themeChangeId = 0;
+async function applyTheme(theme, mode = elements.html.dataset.themeMode, { persist = true } = {}) {
+  const requestId = ++themeChangeId;
   const value = runtime.themes.has(theme) ? theme : state.config.defaults.theme;
   const selectedMode = THEME_MODES.has(mode) ? mode : "system";
+  const stylesheet = runtime.themes.get(value)?.stylesheet;
+  if (stylesheet) await loadStylesheet(stylesheet, `theme:${value}`);
+  if (requestId !== themeChangeId) return;
   elements.html.dataset.theme = value;
   elements.html.dataset.themeMode = selectedMode;
   syncBrowserThemeColor();
@@ -304,12 +286,17 @@ function syncActiveContentMenuOrientation() {
   elements.activeContentMenu.setAttribute("aria-orientation", horizontal ? "horizontal" : "vertical");
 }
 
-function applyLayout(layout, { persist = true } = {}) {
+let layoutChangeId = 0;
+async function applyLayout(layout, { persist = true } = {}) {
+  const requestId = ++layoutChangeId;
   const fallback = runtime.layouts.has(state.config.defaults.layout)
     ? state.config.defaults.layout
     : runtime.layouts.keys()[0];
   const value = runtime.layouts.has(layout) ? layout : fallback;
   if (!value) throw new Error("No document layouts are installed.");
+  const stylesheet = runtime.layouts.get(value)?.stylesheet;
+  if (stylesheet) await loadStylesheet(stylesheet, `layout:${value}`);
+  if (requestId !== layoutChangeId) return;
   elements.html.dataset.layout = value;
   syncActiveContentMenuOrientation();
   syncLayoutOptions();
@@ -1043,232 +1030,6 @@ function toggleTag(id) {
   renderActiveContent();
 }
 
-function prefersReducedMotion() {
-  return matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
-
-// ---- Guided add-item wizard ---------------------------------------------------------
-
-function wizardStepMarkup(label, body, hint = t("continueWithEnter")) {
-  return `<div class="wizard-step"><label>${label}</label>${body}<small>${hint}</small></div>`;
-}
-
-function bookmarksWizardMarkup() {
-  return [
-    wizardStepMarkup(t("bookmarkLabelPrompt"), '<input id="wizardLabel" name="label" type="text" autocomplete="off" required placeholder="Ex. MDN Web Docs">'),
-    wizardStepMarkup(t("bookmarkUrlPrompt"), '<input id="wizardUrl" name="url" type="url" inputmode="url" autocomplete="url" required placeholder="https://…">'),
-    wizardStepMarkup(t("bookmarkTagsPrompt"), '<input id="wizardTags" name="tags" type="text" autocomplete="off" placeholder="web, docs, pwa">', t("addWithEnter"))
-  ].join("");
-}
-
-function cvWizardMarkup() {
-  return [
-    wizardStepMarkup(t("cvItemType"), `<select id="wizardType" name="type" required>
-      <option value="language">${escapeHtml(t("language"))}</option>
-      <option value="course">${escapeHtml(t("course"))}</option>
-      <option value="experience">${escapeHtml(t("experience"))}</option>
-    </select>`),
-    wizardStepMarkup(t("mainInformation"), `
-      <div class="wizard-field-group" data-cv-type="language">
-        <input name="label" type="text" autocomplete="off" required placeholder="${escapeHtml(t("languagePlaceholder"))}">
-      </div>
-      <div class="wizard-field-group" data-cv-type="course" hidden>
-        <input name="label" type="text" autocomplete="off" required placeholder="${escapeHtml(t("coursePlaceholder"))}">
-        <input name="date" type="text" autocomplete="off" placeholder="${escapeHtml(t("datePlaceholder"))}">
-        <input name="location" type="text" autocomplete="off" placeholder="${escapeHtml(t("providerLocationPlaceholder"))}">
-      </div>
-      <div class="wizard-field-group" data-cv-type="experience" hidden>
-        <input name="title" type="text" autocomplete="off" required placeholder="${escapeHtml(t("experienceTitlePlaceholder"))}">
-        <input name="organization" type="text" autocomplete="off" placeholder="${escapeHtml(t("organizationPlaceholder"))}">
-        <input name="subtitle" type="text" autocomplete="off" placeholder="${escapeHtml(t("shortDescriptionPlaceholder"))}">
-      </div>`),
-    wizardStepMarkup(t("additionalInformation"), `
-      <div class="wizard-field-group" data-cv-type="language">
-        <input name="rate" type="number" min="0" max="100" step="1" inputmode="numeric" placeholder="${escapeHtml(t("levelPercentPlaceholder"))}">
-      </div>
-      <div class="wizard-field-group" data-cv-type="course" hidden>
-        <input name="rate" type="number" min="0" max="100" step="1" inputmode="numeric" placeholder="${escapeHtml(t("scorePercentPlaceholder"))}">
-      </div>
-      <div class="wizard-field-group" data-cv-type="experience" hidden>
-        <input name="kind" type="text" autocomplete="off" placeholder="${escapeHtml(t("experienceKindPlaceholder"))}">
-        <input name="format" type="text" autocomplete="off" placeholder="${escapeHtml(t("experienceFormatPlaceholder"))}">
-        <input name="location" type="text" autocomplete="off" placeholder="${escapeHtml(t("locationPlaceholder"))}">
-        <div class="wizard-inline-fields">
-          <input name="startDate" type="text" autocomplete="off" placeholder="${escapeHtml(t("startPlaceholder"))}">
-          <input name="finishDate" type="text" autocomplete="off" placeholder="${escapeHtml(t("finishPlaceholder"))}">
-        </div>
-        <input name="skills" type="text" autocomplete="off" placeholder="${escapeHtml(t("skillsPlaceholder"))}">
-        <textarea name="achievements" rows="2" placeholder="${escapeHtml(t("achievementsPlaceholder"))}"></textarea>
-        <div class="wizard-upload-field">
-          <input id="wizardIllustrationInput" type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" hidden>
-          <input id="wizardIllustrationData" name="illustration" type="hidden">
-          <button id="wizardIllustrationDropzone" class="wizard-upload-zone" type="button">
-            <span class="wizard-upload-title">${escapeHtml(t("experienceIllustration"))}</span>
-            <span class="wizard-upload-copy">${escapeHtml(t("illustrationDropHint"))}</span>
-            <span class="wizard-upload-formats">${escapeHtml(t("imageFormats"))}</span>
-          </button>
-          <div id="wizardIllustrationPreview" class="wizard-upload-preview" hidden>
-            <img alt="${escapeHtml(t("experienceIllustrationPreview"))}">
-            <span id="wizardIllustrationName"></span>
-            <button id="wizardIllustrationRemove" class="wizard-upload-remove" type="button" aria-label="${escapeHtml(t("removeIllustration"))}">×</button>
-          </div>
-        </div>
-      </div>`, t("addWithEnter"))
-  ].join("");
-}
-
-const CV_EXPERIENCE_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
-const CV_EXPERIENCE_IMAGE_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp"]);
-
-function isAllowedCvExperienceImage(file) {
-  if (!(file instanceof File)) return false;
-  const extension = file.name.includes(".") ? file.name.split(".").pop().toLowerCase() : "";
-  return CV_EXPERIENCE_IMAGE_TYPES.has(file.type) || CV_EXPERIENCE_IMAGE_EXTENSIONS.has(extension);
-}
-
-function readFileAsDataURL(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.addEventListener("load", () => resolve(String(reader.result ?? "")), { once: true });
-    reader.addEventListener("error", () => reject(reader.error || new Error(t("imageReadFailed"))), { once: true });
-    reader.readAsDataURL(file);
-  });
-}
-
-function resetCvExperienceIllustration() {
-  const input = elements.wizardForm.querySelector("#wizardIllustrationInput");
-  const data = elements.wizardForm.querySelector("#wizardIllustrationData");
-  const preview = elements.wizardForm.querySelector("#wizardIllustrationPreview");
-  const dropzone = elements.wizardForm.querySelector("#wizardIllustrationDropzone");
-  if (input) input.value = "";
-  if (data) data.value = "";
-  if (preview) {
-    preview.hidden = true;
-    const image = preview.querySelector("img");
-    if (image) image.removeAttribute("src");
-  }
-  const name = elements.wizardForm.querySelector("#wizardIllustrationName");
-  if (name) name.textContent = "";
-  dropzone?.classList.remove("is-dragover");
-}
-
-async function setCvExperienceIllustration(file) {
-  if (!isAllowedCvExperienceImage(file)) {
-    resetCvExperienceIllustration();
-    showToast(t("unsupportedImage"), true);
-    return;
-  }
-
-  try {
-    const dataURL = await readFileAsDataURL(file);
-    if (!/^data:image\/(?:png|jpe?g|webp);base64,/i.test(dataURL)) {
-      throw new Error(t("unsupportedImageFormat"));
-    }
-    const data = elements.wizardForm.querySelector("#wizardIllustrationData");
-    const preview = elements.wizardForm.querySelector("#wizardIllustrationPreview");
-    const dropzone = elements.wizardForm.querySelector("#wizardIllustrationDropzone");
-    const name = elements.wizardForm.querySelector("#wizardIllustrationName");
-    if (!data || !preview) return;
-    data.value = dataURL;
-    const image = preview.querySelector("img");
-    if (image) image.src = dataURL;
-    if (name) name.textContent = file.name;
-    preview.hidden = false;
-    dropzone?.classList.remove("is-dragover");
-  } catch (error) {
-    resetCvExperienceIllustration();
-    showToast(error?.message || t("imageLoadFailed"), true);
-  }
-}
-
-function syncCvWizardType() {
-  const type = elements.wizardForm.elements.namedItem("type")?.value || "language";
-  elements.wizardForm.querySelectorAll("[data-cv-type]").forEach((group) => {
-    const active = group.dataset.cvType === type;
-    group.hidden = !active;
-    group.querySelectorAll("input, select, textarea").forEach((control) => { control.disabled = !active; });
-  });
-}
-
-function configureWizard() {
-  const sectionId = String(state.activeSection ?? "");
-  elements.wizardTrack.innerHTML = sectionId === "cv" ? cvWizardMarkup() : bookmarksWizardMarkup();
-  if (sectionId === "cv") syncCvWizardType();
-}
-
-function visibleWizardStep(step = state.wizardStep) {
-  return elements.wizardTrack.children[step] ?? null;
-}
-
-function focusWizardStep(step) {
-  const control = visibleWizardStep(step)?.querySelector("input:not([disabled]), select:not([disabled]), textarea:not([disabled])");
-  const delay = prefersReducedMotion() ? 0 : 340;
-  setTimeout(() => control?.focus(), delay);
-}
-
-function setWizardStep(step) {
-  const count = Math.max(1, elements.wizardTrack.children.length);
-  state.wizardStep = Math.max(0, Math.min(count - 1, step));
-  elements.wizardTrack.style.width = `${count * 100}%`;
-  [...elements.wizardTrack.children].forEach((child) => { child.style.width = `${100 / count}%`; });
-  elements.wizardTrack.style.transform = `translateX(-${state.wizardStep * (100 / count)}%)`;
-  if (!elements.wizard.hidden) {
-    elements.addButton.classList.toggle("is-previous", state.wizardStep > 0);
-    elements.addButtonSymbol.textContent = state.wizardStep > 0 ? "↩" : "+";
-    elements.addButton.setAttribute("aria-label", state.wizardStep > 0 ? t("previousStep") : t("cancelAdd"));
-  }
-  focusWizardStep(state.wizardStep);
-}
-
-function openWizard() {
-  const adapter = activeContentAdapter();
-  if (typeof adapter?.add !== "function") return;
-  configureWizard();
-  elements.addButton.classList.add("is-cancel");
-  elements.addButton.setAttribute("aria-label", t("cancelAdd"));
-  elements.addButton.setAttribute("aria-expanded", "true");
-  elements.wizardForm.reset();
-  if (String(state.activeSection) === "cv") syncCvWizardType();
-  elements.wizard.hidden = false;
-  void elements.wizard.offsetHeight;
-  elements.wizard.classList.add("is-open");
-  setWizardStep(0);
-}
-
-function closeWizard() {
-  elements.wizard.classList.remove("is-open");
-  elements.wizard.hidden = true;
-  elements.addButton.classList.remove("is-cancel", "is-previous");
-  elements.addButtonSymbol.textContent = "+";
-  elements.addButton.setAttribute("aria-label", t("addItem"));
-  elements.addButton.setAttribute("aria-expanded", "false");
-  state.wizardStep = 0;
-  elements.wizardTrack.style.transform = "translateX(0)";
-  syncContextualTools();
-}
-
-function validateWizardStep() {
-  const step = visibleWizardStep();
-  if (!step) return true;
-  for (const control of step.querySelectorAll("input:not([disabled]), select:not([disabled]), textarea:not([disabled])")) {
-    if (control.type === "url" && control.required && control.value.trim() && !isLinkUrl(control.value)) {
-      control.setCustomValidity(t("invalidLinkUrl"));
-    } else {
-      control.setCustomValidity("");
-    }
-    if (!control.checkValidity()) {
-      control.reportValidity();
-      control.focus();
-      return false;
-    }
-  }
-  return true;
-}
-
-function getWizardValues() {
-  return Object.fromEntries(new FormData(elements.wizardForm).entries());
-}
-
 // ---- Unsaved-change notifications --------------------------------------------------
 
 function updateSettingsNotification() {
@@ -1308,32 +1069,6 @@ function clearChangeNotifications() {
   updateSaveNotification();
 }
 
-function submitWizardStep() {
-  if (!validateWizardStep()) return;
-  const count = Math.max(1, elements.wizardTrack.children.length);
-  if (state.wizardStep < count - 1) {
-    if (String(state.activeSection) === "cv" && state.wizardStep === 0) syncCvWizardType();
-    setWizardStep(state.wizardStep + 1);
-    return;
-  }
-
-  const adapter = activeContentAdapter();
-  if (typeof adapter?.add !== "function") {
-    closeWizard();
-    return;
-  }
-
-  try {
-    adapter.add(state.model, getWizardValues());
-    incrementChangeNotifications();
-    closeWizard();
-    refreshView();
-    runtime.emit("document:changed", { operation: "add", plugin: adapter.id });
-  } catch (error) {
-    showToast(error?.message || String(error), true);
-  }
-}
-
 let toastTimer = null;
 function showToast(message, isError = false) {
   clearTimeout(toastTimer);
@@ -1364,10 +1099,16 @@ function saveDocument() {
 }
 
 
-function toggleSettings(force) {
+async function toggleSettings(force) {
   const open = typeof force === "boolean" ? force : elements.settingsPanel.hidden;
 
   if (open) {
+    try {
+      await loadStylesheet("./css/settings.css", "feature:settings");
+    } catch (error) {
+      showToast(error.message || String(error), true);
+      return;
+    }
     elements.settingsPanel.hidden = false;
   } else {
     elements.settingsPanel.hidden = true;
@@ -1392,9 +1133,14 @@ function bindEvents() {
       syncUrlPreferences();
     }
   });
-  elements.themeSelect.addEventListener("change", () => {
-    applyTheme(elements.themeSelect.value);
-    syncUrlPreferences();
+  elements.themeSelect.addEventListener("change", async () => {
+    try {
+      await applyTheme(elements.themeSelect.value);
+      syncUrlPreferences();
+    } catch (error) {
+      elements.themeSelect.value = elements.html.dataset.theme;
+      showToast(error.message || String(error), true);
+    }
   });
   window.matchMedia?.("(prefers-color-scheme: dark)")?.addEventListener?.("change", syncBrowserThemeColor);
   classicNarrowScreen.addEventListener("change", () => {
@@ -1403,16 +1149,24 @@ function bindEvents() {
     syncTagsPlacement();
   });
   elements.themeModeButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-      applyTheme(elements.html.dataset.theme, button.dataset.themeModeValue);
-      syncUrlPreferences();
+    button.addEventListener("click", async () => {
+      try {
+        await applyTheme(elements.html.dataset.theme, button.dataset.themeModeValue);
+        syncUrlPreferences();
+      } catch (error) {
+        showToast(error.message || String(error), true);
+      }
     });
   });
-  elements.layoutOptions.addEventListener("click", (event) => {
+  elements.layoutOptions.addEventListener("click", async (event) => {
     const button = event.target.closest("[data-layout-value]");
     if (button && elements.layoutOptions.contains(button)) {
-      applyLayout(button.dataset.layoutValue);
-      syncUrlPreferences();
+      try {
+        await applyLayout(button.dataset.layoutValue);
+        syncUrlPreferences();
+      } catch (error) {
+        showToast(error.message || String(error), true);
+      }
     }
   });
   elements.statisticsToggle.addEventListener("click", () => {
@@ -1481,55 +1235,18 @@ function bindEvents() {
     selectActiveContentSection(tabs[nextIndex].dataset.activeContentSection, { focus: true });
   });
 
-  elements.addButton.addEventListener("click", () => {
-    if (elements.wizard.hidden) openWizard();
-    else if (state.wizardStep > 0) setWizardStep(state.wizardStep - 1);
-    else closeWizard();
-  });
-
-  elements.wizardForm.addEventListener("submit", (event) => event.preventDefault());
-  elements.wizardForm.addEventListener("input", (event) => {
-    if (event.target?.setCustomValidity) event.target.setCustomValidity("");
-  });
-  elements.wizardForm.addEventListener("change", (event) => {
-    if (event.target?.name === "type" && String(state.activeSection) === "cv") syncCvWizardType();
-    if (event.target?.id === "wizardIllustrationInput") {
-      const file = event.target.files?.[0];
-      if (file) void setCvExperienceIllustration(file);
+  elements.addButton.addEventListener("click", async () => {
+    if (wizardLoading && !wizardController) return;
+    const section = state.activeSection;
+    try {
+      const controller = await ensureWizardController();
+      if (section !== state.activeSection) return;
+      if (elements.wizard.hidden) controller.open();
+      else if (state.wizardStep > 0) controller.setStep(state.wizardStep - 1);
+      else controller.close();
+    } catch (error) {
+      showToast(error.message || String(error), true);
     }
-  });
-  elements.wizardForm.addEventListener("click", (event) => {
-    if (event.target.closest("#wizardIllustrationDropzone")) {
-      elements.wizardForm.querySelector("#wizardIllustrationInput")?.click();
-      return;
-    }
-    if (event.target.closest("#wizardIllustrationRemove")) resetCvExperienceIllustration();
-  });
-  elements.wizardForm.addEventListener("dragover", (event) => {
-    const dropzone = event.target.closest("#wizardIllustrationDropzone");
-    if (!dropzone) return;
-    event.preventDefault();
-    if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
-    dropzone.classList.add("is-dragover");
-  });
-  elements.wizardForm.addEventListener("dragleave", (event) => {
-    const dropzone = event.target.closest("#wizardIllustrationDropzone");
-    if (!dropzone || dropzone.contains(event.relatedTarget)) return;
-    dropzone.classList.remove("is-dragover");
-  });
-  elements.wizardForm.addEventListener("drop", (event) => {
-    const dropzone = event.target.closest("#wizardIllustrationDropzone");
-    if (!dropzone) return;
-    event.preventDefault();
-    dropzone.classList.remove("is-dragover");
-    const file = event.dataTransfer?.files?.[0];
-    if (file) void setCvExperienceIllustration(file);
-  });
-  elements.wizardForm.addEventListener("keydown", (event) => {
-    if (event.key !== "Enter" || event.shiftKey) return;
-    if (!event.target.matches("input, select, textarea")) return;
-    event.preventDefault();
-    submitWizardStep();
   });
 
   document.addEventListener("keydown", (event) => {
@@ -1560,7 +1277,7 @@ async function start() {
   const theme = THEME_MODES.has(storedTheme) ? "core" : storedTheme;
   const urlTheme = getUrlPreference("theme", (value) => runtime.themes.has(value));
   const urlMode = getUrlPreference("color", (value) => THEME_MODES.has(value));
-  applyTheme(urlTheme ?? theme, urlMode ?? getStoredPreference("kite.themeMode", legacyMode),
+  await applyTheme(urlTheme ?? theme, urlMode ?? getStoredPreference("kite.themeMode", legacyMode),
     { persist: urlTheme === null && urlMode === null });
 
   const storedLayout = getStoredPreference("kite.layout", state.config.defaults.layout);
@@ -1575,7 +1292,7 @@ async function start() {
   const urlLayout = getUrlPreference("layout", (value) =>
     runtime.layouts.has(value) || value === "two-column" || value === "one-page");
   const resolvedUrlLayout = urlLayout === "two-column" || urlLayout === "one-page" ? "classic" : urlLayout;
-  applyLayout(resolvedUrlLayout ?? savedLayout, { persist: urlLayout === null });
+  await applyLayout(resolvedUrlLayout ?? savedLayout, { persist: urlLayout === null });
   setStoredPreference("kite.layoutVersion", "1");
 
   const urlStatistics = getUrlPreference("stats", (value) => value === "true" || value === "false");
@@ -1590,6 +1307,9 @@ async function start() {
 }
 
 start().catch((error) => {
+  document.documentElement.classList.remove("presentation-loading");
+  elements.activeContentMenu.hidden = true;
+  elements.addButton.hidden = true;
   console.error(error);
   elements.itemsList.innerHTML = `<div class="fatal-error"><strong>${escapeHtml(t("startupFailedTitle"))}</strong><p>${escapeHtml(error.message || error)}</p></div>`;
   showToast(error.message || t("startupFailed"), true);

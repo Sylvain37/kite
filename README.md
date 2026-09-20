@@ -41,6 +41,8 @@ Kite is a static no-build application, so the repository includes an empty `.noj
 
 All application paths are relative, so Kite can be hosted at the root of a domain or below a GitHub Pages project path.
 
+GitHub Pages currently sends `Cache-Control: max-age=600` for this site's JavaScript and CSS. Repository files and the Service Worker cannot change that HTTP response header for first visits. To use longer browser cache lifetimes, host the static files behind a server or CDN that lets you set response headers. Give fingerprinted JS/CSS asset URLs a long lifetime such as `public, max-age=31536000, immutable`, and keep `index.html` and `sw.js` short lived so visitors discover releases. A longer lifetime on Kite's current unversioned JS/CSS URLs would risk stale modules after deployment. Continue increasing the visible app version and `CACHE_VERSION` together for each release.
+
 The bundled `data/default.yml` contains a deliberately fictional CV (`Camille EXAMPLE`) with `example.com` contact links and generated placeholder illustrations. Keep demonstration content fictional when changing it, and still review every bundled file before publishing because GitHub Pages makes the published site content public.
 
 ## Install the PWA
@@ -82,16 +84,18 @@ The main layers are:
 
 ```text
 index.html                    Static, English canonical UI shell
-css/app.css                   Shared component presentation
+css/app.css                   Styles needed for the initial view
+css/settings.css, wizard.css  Styles loaded when each feature first opens
 config/kite.json              Foundation modules and defaults
 data/default.yml              Bundled fictional demonstration document, canonical English data
-js/main.js                    Application controller and DOM rendering
+js/main.js                    Startup, application controller and document rendering
+js/app/wizard.js              Add-item editor, imported on first use
 js/i18n.js                    Locale catalogue plus UI and exact-term translations
 js/shared/                    Reusable data and DOM/safety helpers
 js/kernel/                    Registries and runtime/event bus
 js/contracts/                 Plugin contract validation
 js/app/                       Foundation loading and business-plugin resolution
-js/platform/                  File and PWA browser gateways
+js/platform/                  File, stylesheet and PWA browser gateways
 js/extensions/                YAML codec, theme plugins, and autonomous layout plugins with their stylesheets
 js/plugins/                   Business document adapters
 sw.js                         Offline application shell
@@ -225,7 +229,7 @@ Use URL parameters to open a specific presentation, for example:
 
 Changing language retranslates the current active content cards, counters, search context, layout labels and an open add-item wizard while preserving its in-progress values. Theme, color mode and layout preferences are applied through `data-theme`, `data-theme-mode` and `data-layout` attributes on `<html>`.
 
-Core and Selene are theme plugins in `js/extensions/themes/core/` and `js/extensions/themes/selene/`. Core adapts [Min Light and Min Dark by Miguel Solorio](https://github.com/miguelsolorio/min-theme) to Kite’s color roles; Selene retains its own palette. Each plugin loads its own `style.css`. The two layout plugins live in `js/extensions/layouts/classic/` and `js/extensions/layouts/workspace/`; each registers one choice and loads its own `style.css` for document geometry. `css/app.css` contains shared component rules. Add a `theme` or `layout` foundation entry to `config/kite.json` to install another plugin; Settings builds the theme and layout choices from their registries. All bundled plugin stylesheets are precached for offline use.
+Core and Selene are theme plugins in `js/extensions/themes/core/` and `js/extensions/themes/selene/`. Core adapts [Min Light and Min Dark by Miguel Solorio](https://github.com/miguelsolorio/min-theme) to Kite’s color roles; Selene retains its own palette. Each plugin registers a `style.css` URL that loads when selected. The two layout plugins live in `js/extensions/layouts/classic/` and `js/extensions/layouts/workspace/`; each registers one choice and loads its `style.css` when selected. `css/app.css` contains initial shared component rules. Add a `theme` or `layout` foundation entry to `config/kite.json` to install another plugin; Settings builds the theme and layout choices from their registries. All bundled plugin stylesheets are precached for offline use.
 
 Both themes use the same CSS color roles, defined separately for light and dark modes in `js/extensions/themes/core/style.css` and `js/extensions/themes/selene/style.css`. System mode follows the matching system color scheme. `background` is the page canvas; `landscape-primary`, `landscape-secondary`, `landscape-inverted`, `landscape-delimited` and `landscape-filled` describe structural surfaces and their borders. `inactive-primary`, `inactive-secondary`, `inactive-inverted`, `inactive-delimited` and `inactive-filled` describe ordinary text and controls. Their `active-*` counterparts describe selected text, borders and fills. `hover`, `focus` and `accent` cover interaction and brand colors. `success-state`, `error-state`, `warning-state` and `pending-state` are status colors; `shadow` is the elevation shadow. Components consume these roles instead of declaring colors directly. Selene adds a subtle top-left lightening gradient to landscape-backed surfaces; print uses flat monochrome colors.
 

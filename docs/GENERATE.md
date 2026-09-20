@@ -10,7 +10,7 @@ This document is a self-contained prompt intended for a capable coding agent. It
 - Reasoning effort used for this maintenance pass: **High**
 - Agent role: **front-end/PWA code-maintenance agent with local repository editing and validation tools**
 - Reference date: **2026-09-17**
-- Target Kite release: **v0.5.76**
+- Target Kite release: **v0.5.77**
 - Execution context used for maintenance: a Linux sandbox with filesystem/shell access, Python and Node.js available for validation; the application itself must not depend on those tools at runtime.
 - Reproducibility boundary: hidden chain-of-thought, private system prompts and platform-internal instructions are not application dependencies and must not be required. The generated repository must be justified by explicit source files, comments and executable/browser-visible behaviour.
 
@@ -66,6 +66,8 @@ kite/
     kite.json
   css/
     app.css
+    settings.css
+    wizard.css
   data/
     default.yml
   docs/
@@ -86,6 +88,7 @@ kite/
       constants.js
       document-plugin-resolver.js
       foundation-modules.js
+      wizard.js
     contracts/
       plugin.js
     kernel/
@@ -94,6 +97,7 @@ kite/
     platform/
       file-gateway.js
       pwa.js
+      stylesheet.js
     shared/
       data.js
       dom.js
@@ -227,13 +231,13 @@ Reject structurally invalid indentation/input with clear English errors. Preserv
 # 11. Theme/layout extensions
 
 Theme plugins:
-- Core manifest id `org.kite.theme.core`, version `1.0.0`, kind `theme`; load its stylesheet and register the `core` family. Adapt Min Light and Min Dark by Miguel Solorio from https://github.com/miguelsolorio/min-theme to the Core roles; use their UI colors for surfaces and blue functional accents, and derive status roles from their token/terminal/diff colors. The Core search field uses the same 1px accent border as its buttons.
-- Selene manifest id `org.kite.theme.selene`, version `1.0.0`, kind `theme`; load its stylesheet and register the `selene` family.
+- Core manifest id `org.kite.theme.core`, version `1.0.0`, kind `theme`; register the `core` family with its stylesheet URL for loading when selected. Adapt Min Light and Min Dark by Miguel Solorio from https://github.com/miguelsolorio/min-theme to the Core roles; use their UI colors for surfaces and blue functional accents, and derive status roles from their token/terminal/diff colors. The Core search field uses the same 1px accent border as its buttons.
+- Selene manifest id `org.kite.theme.selene`, version `1.0.0`, kind `theme`; register the `selene` family with its stylesheet URL for loading when selected.
 - Both families support `system`, `light` and `dark` color modes. The Settings dropdown is built from registered theme families. Keep the browser theme-color meta tag in sync with the selected palette background, including system color-scheme changes.
 - Each light and dark palette defines the same CSS roles: `background`, `landscape-primary`, `landscape-secondary`, `landscape-inverted`, `landscape-delimited`, `landscape-filled`, `inactive-primary`, `inactive-secondary`, `inactive-inverted`, `inactive-delimited`, `inactive-filled`, `active-primary`, `active-secondary`, `active-inverted`, `active-delimited`, `active-filled`, `hover`, `focus`, `accent`, `success-state`, `error-state`, `warning-state`, `pending-state` and `shadow`. Components use the roles instead of hard-coded colors; system mode follows the appropriate palette.
 
 Document layout plugins:
-- each layout has its own `plugin.js` and `style.css`, loads that stylesheet on activation, and registers one entry in the `layouts` registry;
+- each layout has its own `plugin.js` and `style.css`, registers one entry with a stylesheet URL in the `layouts` registry, and loads the stylesheet only when selected;
 - `org.kite.layout.classic` registers `classic` (“Classic”): two columns above 760px and one document flow at 760px or less;
 - `org.kite.layout.workspace` registers `workspace` (“Workspace”): framed top bar and full-height sidebar;
 - every layout works with every theme. Settings generates layout buttons from the registry; theme stylesheets provide colors and component skin, while layout stylesheets own document geometry.
@@ -366,7 +370,7 @@ Use shared helpers instead of copies.
 
 # 16. Main UI controller
 
-`js/main.js` owns application state, browser events and rendering, not document schema rules.
+`js/main.js` owns application state, browser events and rendering, not document schema rules. `js/app/wizard.js` owns the add-item editor and loads on first use.
 
 On start:
 1. generate language buttons from `supportedLocales()`;
@@ -383,7 +387,7 @@ On start:
 State includes config, active adapter/model/view, active content sections, active section, source filename, selected tag, search query, statistics visibility, wizard step and unsaved-change badge counts.
 
 Required UI behaviour:
-- Settings places the document title in bold, the translated quote in italics, `· v0.5.76 ·`, and the GitHub link below a separator after the data management controls.
+- Settings places the document title in bold, the translated quote in italics, `· v0.5.77 ·`, and the GitHub link below a separator after the data management controls.
 - Search is diacritic-insensitive and matches both canonical and localised exact terms.
 - Render the active content sections as a keyboard-operable tab menu in `contextMenu` above `tagsTitle`, including when the active section has no tags. Use a horizontal row in narrow `classic` and a vertical menu otherwise.
 - Each menu row keeps its item count aligned to the right; arrow keys/Home/End move among sections.
@@ -480,8 +484,9 @@ Save:
 - context menu with a Settings button beside the section menu on wide screens and narrow Core screens; on narrow Selene screens Settings moves into the search/Add row above active content;
 - content shell with context menu and active content;
 - empty active content state;
-- document title, quote, release `v0.5.76` and GitHub link in `app-info`, placed in its own Settings section after the data controls;
+- document title, quote, release `v0.5.77` and GitHub link in `app-info`, placed in its own Settings section after the data controls;
 - toast region;
+- an early inline bootstrap that sets theme, color, layout and language before the first paint, loads only the selected theme/layout stylesheets, and positions the narrow Selene Settings button;
 - one module script `./js/main.js`.
 
 Use these exact DOM ids because main.js references them:
@@ -494,7 +499,7 @@ Language/color-mode/layout option buttons use data-locale-value / data-theme-mod
 
 # 18. CSS and visual design
 
-Create `css/app.css` for shared component rules. Core and Selene load their own theme stylesheets. The `classic` and `workspace` layout plugins each load a separate stylesheet for document geometry. Do not place layout rules in `css/app.css` or tie them to a theme selector.
+Create `css/app.css` for initial shared component rules, plus `css/settings.css` and `css/wizard.css` for optional features. Core and Selene load their own theme stylesheets when selected. The `classic` and `workspace` layout plugins each load a separate stylesheet when selected for document geometry. Do not place layout rules in `css/app.css` or tie them to a theme selector.
 
 Design character:
 - theme-specific surfaces for the document and controls;
@@ -675,11 +680,17 @@ data:
 
 Create a simple Kite favicon/logo in SVG and corresponding raster/icon files. Assets must be local.
 
-# 21. Service worker
+# 21. Initial loading and optional styles
+
+Keep `css/app.css` limited to the initial document view. Place Settings and add-item editor rules in `css/settings.css` and `css/wizard.css`; load each on first use. The add-item editor logic lives in `js/app/wizard.js` and is imported on first use. Theme and layout plugins register stylesheet URLs without loading all styles at activation. An early script in `index.html` applies the URL or saved theme/layout before first paint and loads only the selected pair. Keep the initial menu and controls stable while the document loads; an empty mobile tags list must take no space. Test the Selene URL with classic layout and statistics at desktop and narrow widths for layout shifts.
+
+GitHub Pages controls the HTTP `Cache-Control` header for JS/CSS (currently `max-age=600` on the reference deployment). The Service Worker cache cannot alter that first-visit response header. Long browser TTLs require a host or CDN with configurable headers and fingerprinted asset URLs; keep HTML and `sw.js` short lived.
+
+# 22. Service worker
 
 `sw.js`:
-- `CACHE_VERSION = "v0.5.76"`;
-- precache the complete shell including the new shared modules and constants;
+- `CACHE_VERSION = "v0.5.77"`;
+- precache the complete shell including optional feature styles, theme/layout styles, the wizard module and shared modules;
 - installation: cache shell and skipWaiting;
 - activation: delete older caches and claim clients;
 - intercept same-origin GET only;
@@ -688,7 +699,7 @@ Create a simple Kite favicon/logo in SVG and corresponding raster/icon files. As
 - navigation fallback to cached `./index.html` on network failure;
 - comments in English.
 
-# 22. Local helper scripts
+# 23. Local helper scripts
 
 Provide `kite.sh`, `kite.ps1`, and `kite.cmd` that:
 - change to their own directory;
@@ -696,7 +707,7 @@ Provide `kite.sh`, `kite.ps1`, and `kite.cmd` that:
 - print English messages;
 - require Python only for these helper scripts, not for the application.
 
-# 23. README
+# 24. README
 
 Write a polished GitHub-facing README in English that:
 - explains the no-build/no-backend architecture;
@@ -711,7 +722,7 @@ Write a polished GitHub-facing README in English that:
 - links to `docs/GENERATE.md`;
 - reminds maintainers to add an explicit repository license before accepting third-party contributions if none exists.
 
-# 24. Acceptance checks
+# 25. Acceptance checks
 
 Before finishing, perform or emulate all checks possible in your environment and fix failures:
 
@@ -771,7 +782,7 @@ E. Responsive/accessibility/print
 - prefers-reduced-motion disables nonessential animation;
 - print hides interactive controls and keeps content legible.
 
-# 25. Delivery format
+# 26. Delivery format
 
 Return the complete generated repository, not snippets. Do not ask the user to manually fill missing code. If a tooling limitation prevents byte-identical binary icons/portrait, generate deterministic valid equivalents while preserving every functional file contract and document the difference. The application must run immediately from a static HTTP server.
 ```

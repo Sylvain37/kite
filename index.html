@@ -11,6 +11,46 @@
   <link rel="icon" href="./images/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="./images/apple-touch-icon.png">
   <link rel="stylesheet" href="./css/app.css">
+  <script>
+    // Apply the selected presentation before the body is painted.
+    (() => {
+      const root = document.documentElement;
+      const params = new URLSearchParams(location.search);
+      const stored = (key) => { try { return localStorage.getItem(key); } catch { return null; } };
+      const choice = (value, choices, fallback) => choices.includes(value) ? value : fallback;
+      const savedTheme = stored("kite.theme") || "core";
+      const theme = choice(params.get("theme"), ["core", "selene"],
+        choice(savedTheme, ["core", "selene"], "core"));
+      const legacyMode = ["system", "light", "dark"].includes(savedTheme) ? savedTheme : "system";
+      const color = choice(params.get("color"), ["system", "light", "dark"],
+        choice(stored("kite.themeMode"), ["system", "light", "dark"], legacyMode));
+      const savedLayout = stored("kite.layout") || "classic";
+      const layoutVersion = stored("kite.layoutVersion") || stored("kite.layoutSchemaVersion") || "";
+      const migratedLayout = savedLayout === "two-column" && savedTheme === "selene" && layoutVersion !== "1"
+        ? "workspace" : choice(savedLayout, ["classic", "workspace"], "classic");
+      const requestedLayout = params.get("layout");
+      const layout = choice(requestedLayout, ["classic", "workspace"],
+        ["two-column", "one-page"].includes(requestedLayout) ? "classic" : migratedLayout);
+      root.dataset.theme = theme;
+      root.dataset.themeMode = color;
+      root.dataset.layout = layout;
+      root.lang = choice(params.get("lang"), ["en", "fr"], choice(stored("kite.locale"), ["en", "fr"], "en"));
+      root.classList.add("presentation-loading");
+      const styles = [
+        [`theme:${theme}`, `./js/extensions/themes/${theme}/style.css`],
+        [`layout:${layout}`, `./js/extensions/layouts/${layout}/style.css`]
+      ];
+      Promise.all(styles.map(([key, href]) => new Promise((resolve) => {
+        const link = document.createElement("link");
+        link.rel = "stylesheet";
+        link.href = href;
+        link.dataset.kiteStyle = key;
+        link.addEventListener("load", resolve, { once: true });
+        link.addEventListener("error", () => { link.remove(); resolve(); }, { once: true });
+        document.head.append(link);
+      }))).then(() => root.classList.remove("presentation-loading"));
+    })();
+  </script>
 </head>
 <body>
 
@@ -19,7 +59,7 @@
       <section class="content-shell">
         <aside id="contextMenu" class="context-menu" aria-label="Context menu" data-i18n-aria-label="contextMenu">
           <div id="contextMenuNavigation" class="context-menu-navigation">
-            <div id="activeContentMenu" class="active-content-menu no-print" role="tablist" aria-orientation="vertical" aria-label="Active content sections" data-i18n-aria-label="activeContentSections" hidden></div>
+            <div id="activeContentMenu" class="active-content-menu no-print" role="tablist" aria-orientation="vertical" aria-label="Active content sections" data-i18n-aria-label="activeContentSections"></div>
             <div class="context-menu-settings no-print">
               <button id="settingsButton" class="floating-menu-button no-print" type="button" aria-label="Open settings" data-i18n-aria-label="settingsOpen" aria-controls="settingsPanel" aria-expanded="false">
               <svg class="settings-button-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false">
@@ -83,7 +123,7 @@
           </div>
           <div class="app-info-row">
             <span class="app-info-label" data-i18n="applicationVersion">Application version:</span>
-            <span class="appVersion">v0.5.76</span>
+            <span class="appVersion">v0.5.77</span>
           </div>
           <div class="app-info-row">
             <span class="app-info-label" data-i18n="moreInfo">More info:</span>
@@ -98,7 +138,7 @@
             <label class="search-box" for="searchInput">
               <input id="searchInput" type="search" autocomplete="off" placeholder="Search…" data-i18n-placeholder="search" aria-label="Search the document" data-i18n-aria-label="searchDocument">
             </label>
-            <button id="addButton" class="add-button" type="button" aria-label="Add an item" data-i18n-aria-label="addItem" aria-expanded="false" hidden><span class="add-button-symbol" aria-hidden="true">+</span></button>
+            <button id="addButton" class="add-button" type="button" aria-label="Add an item" data-i18n-aria-label="addItem" aria-expanded="false"><span class="add-button-symbol" aria-hidden="true">+</span></button>
           </div>
           <div id="wizard" class="wizard no-print" hidden aria-label="Add an item" data-i18n-aria-label="addItem">
             <form id="wizardForm" novalidate>
@@ -117,6 +157,12 @@
   </div>
 
   <div id="toast" class="toast no-print" role="status" aria-live="polite" hidden></div>
+  <script>
+    // Keep the narrow Selene Settings control in its final slot before first paint.
+    if (document.documentElement.dataset.theme === "selene" && matchMedia("(max-width: 760px)").matches) {
+      document.querySelector(".active-content-tools").append(document.querySelector(".context-menu-settings"));
+    }
+  </script>
   <script type="module" src="./js/main.js"></script>
 </body>
 </html>

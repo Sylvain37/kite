@@ -4,15 +4,18 @@
  * The service worker uses a stale-while-revalidate strategy for same-origin GET
  * requests. Bump CACHE_VERSION whenever a release changes shell resources.
  */
-const CACHE_VERSION = "v0.5.76";
+const CACHE_VERSION = "v0.5.77";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./css/app.css",
+  "./css/settings.css",
+  "./css/wizard.css",
   "./config/kite.json",
   "./data/default.yml",
   "./site.webmanifest",
   "./js/main.js",
+  "./js/app/wizard.js",
   "./js/i18n.js",
   "./js/app/constants.js",
   "./js/app/document-plugin-resolver.js",
@@ -22,6 +25,7 @@ const APP_SHELL = [
   "./js/kernel/runtime.js",
   "./js/platform/file-gateway.js",
   "./js/platform/pwa.js",
+  "./js/platform/stylesheet.js",
   "./js/shared/data.js",
   "./js/shared/dom.js",
   "./js/extensions/codecs/yaml/plugin.js",

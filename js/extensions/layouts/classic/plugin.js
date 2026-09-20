@@ -5,24 +5,9 @@ export const manifest = {
   kind: "layout"
 };
 
-export async function activate(context) {
-  const stylesheet = document.createElement("link");
-  stylesheet.rel = "stylesheet";
-  stylesheet.href = new URL("./style.css", import.meta.url).href;
-  const loaded = new Promise((resolve, reject) => {
-    stylesheet.addEventListener("load", resolve, { once: true });
-    stylesheet.addEventListener("error", () => reject(new Error("Unable to load the classic layout stylesheet.")), { once: true });
+export function activate(context) {
+  return context.layouts.register("classic", {
+    id: "classic", label: "Classic", labelKey: "layoutClassic",
+    stylesheet: new URL("./style.css", import.meta.url).href
   });
-  document.head.append(stylesheet);
-  try {
-    await loaded;
-    const unregister = context.layouts.register("classic", { id: "classic", label: "Classic", labelKey: "layoutClassic" });
-    return () => {
-      unregister();
-      stylesheet.remove();
-    };
-  } catch (error) {
-    stylesheet.remove();
-    throw error;
-  }
 }
