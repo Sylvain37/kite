@@ -72,7 +72,7 @@ Kite is organised around a microkernel. `js/kernel/runtime.js` exposes registrie
 - `codecs`: serialisation codecs;
 - `documents`: business/document adapters;
 - `themes`: available visual themes;
-- `layouts`: available page layouts;
+- `layouts`: installed document layouts;
 - `services`: shared services;
 - `events`, `emit()` and `on()`: an `EventTarget`-based event bus.
 
@@ -82,7 +82,7 @@ The main layers are:
 
 ```text
 index.html                    Static, English canonical UI shell
-css/app.css                   Theme and component presentation
+css/app.css                   Shared component presentation
 config/kite.json              Foundation modules and defaults
 data/default.yml              Bundled fictional demonstration document, canonical English data
 js/main.js                    Application controller and DOM rendering
@@ -92,7 +92,7 @@ js/kernel/                    Registries and runtime/event bus
 js/contracts/                 Plugin contract validation
 js/app/                       Foundation loading and business-plugin resolution
 js/platform/                  File and PWA browser gateways
-js/extensions/                YAML codec, themes and layouts
+js/extensions/                YAML codec, theme plugins, and autonomous layout plugins with their stylesheets
 js/plugins/                   Business document adapters
 sw.js                         Offline application shell
 site.webmanifest              PWA metadata
@@ -119,7 +119,7 @@ Avoid abbreviations that obscure intent. Reusable behaviour belongs in `js/share
 
 `js/i18n.js` is the single source of truth for supported interface languages and translations. It contains:
 
-- `LOCALES`, which declares each selectable language with its code, flag emoji and native language name;
+- `LOCALES`, which declares each selectable language with its code, flat flag SVG and native language name;
 - `TRANSLATIONS`, which stores application messages by semantic key, currently with `en` and `fr` variants;
 - `TERM_TRANSLATIONS`, which stores exact canonical data/metadata values and their locale equivalents, including CV section titles such as `Languages ↔ Langues` and `Courses ↔ Formations`.
 
@@ -213,15 +213,23 @@ data:
 
 The settings menu can import `.yml`/`.yaml` files using native browser file APIs and export the current model using `Blob`, `URL.createObjectURL()` and an `<a download>` action.
 
-The exported file is named `<original-name>-export.yml`. Additions raise notification badges on both settings and save controls until the document is saved.
+The exported file is named `<original-name>-export.yml`. Additions show the same small dot on Settings and Save until the document is saved. Both buttons keep the count in their accessible labels.
 
 ## Language, themes, layouts and statistics
 
-Kite currently ships with English (`🇬🇧 English`) and French (`🇫🇷 Français`) interface choices, System/Light/Dark themes, and `two-column`/`one-page` layouts. The locale, theme, layout and statistics preferences are stored in `localStorage` under `kite.locale`, `kite.theme`, `kite.layout` and `kite.statistics`.
+Kite ships with English (`United Kingdom flag/English`) and French (`French flag/Français`) interface choices. The theme list contains **Core** and **Selene**; each supports System, Light and Dark color modes. The independent Layout control offers `classic` and `workspace`, and every layout can be combined with either theme. The locale, theme, color mode, layout and statistics preferences are stored in `localStorage` under `kite.locale`, `kite.theme`, `kite.themeMode`, `kite.layout` and `kite.statistics`. Existing System/Light/Dark values in `kite.theme` are migrated to Core on startup. Existing Selene users with legacy `two-column` are moved once to `workspace` to preserve their previous arrangement. Other saved `two-column` and `one-page` choices map to `classic`; old URL values also resolve to `classic`. Classic shows two columns above 760px and the former one-page flow at 760px or less.
 
-Changing language retranslates the current result cards, counters, search context and an open add-item wizard while preserving its in-progress values. Theme and layout preferences are applied through `data-theme` and `data-layout` attributes on `<html>`.
+Use URL parameters to open a specific presentation, for example:
+`?lang=fr&theme=selene&color=dark&layout=workspace&stats=true`.
+`lang` accepts `en` or `fr`; `theme` and `layout` accept IDs registered by installed plugins; `color` accepts `system`, `light` or `dark`; `stats` accepts `true` or `false`. Valid URL values override saved preferences for that visit without changing them. Missing or invalid values fall back to saved preferences. Changing a setting updates all five parameters in the address bar without reloading and preserves unrelated parameters and the fragment.
 
-Optional statistics show the ten most-used tags for bookmarks or skills for CV experiences in the current result set. The preference is also stored locally.
+Changing language retranslates the current active content cards, counters, search context, layout labels and an open add-item wizard while preserving its in-progress values. Theme, color mode and layout preferences are applied through `data-theme`, `data-theme-mode` and `data-layout` attributes on `<html>`.
+
+Core and Selene are theme plugins in `js/extensions/themes/core/` and `js/extensions/themes/selene/`. Core adapts [Min Light and Min Dark by Miguel Solorio](https://github.com/miguelsolorio/min-theme) to Kite’s color roles; Selene retains its own palette. Each plugin loads its own `style.css`. The two layout plugins live in `js/extensions/layouts/classic/` and `js/extensions/layouts/workspace/`; each registers one choice and loads its own `style.css` for document geometry. `css/app.css` contains shared component rules. Add a `theme` or `layout` foundation entry to `config/kite.json` to install another plugin; Settings builds the theme and layout choices from their registries. All bundled plugin stylesheets are precached for offline use.
+
+Both themes use the same CSS color roles, defined separately for light and dark modes in `js/extensions/themes/core/style.css` and `js/extensions/themes/selene/style.css`. System mode follows the matching system color scheme. `background` is the page canvas; `landscape-primary`, `landscape-secondary`, `landscape-inverted`, `landscape-delimited` and `landscape-filled` describe structural surfaces and their borders. `inactive-primary`, `inactive-secondary`, `inactive-inverted`, `inactive-delimited` and `inactive-filled` describe ordinary text and controls. Their `active-*` counterparts describe selected text, borders and fills. `hover`, `focus` and `accent` cover interaction and brand colors. `success-state`, `error-state`, `warning-state` and `pending-state` are status colors; `shadow` is the elevation shadow. Components consume these roles instead of declaring colors directly. Selene adds a subtle top-left lightening gradient to landscape-backed surfaces; print uses flat monochrome colors.
+
+Optional statistics show the ten most-used tags for bookmarks or skills for CV experiences in the current active content. The preference is also stored locally.
 
 ## Offline behaviour
 
@@ -233,7 +241,7 @@ Imported YAML is treated as untrusted content:
 
 - dynamic HTML text is escaped;
 - URLs are filtered through central helpers;
-- general links allow only `http:`, `https:`, `mailto:` and `tel:`;
+- general links allow only `http:`, `https:`, `file:`, `mailto:` and `tel:`;
 - CV images allow safe HTTP(S) sources or explicitly validated image data URLs;
 - `javascript:` is rejected;
 - external HTTP(S) links opened in a new tab use `rel="noopener"`.
@@ -242,7 +250,7 @@ Keep URL validation and HTML escaping in `js/shared/dom.js` so new renderers use
 
 ## Accessibility and print
 
-The UI includes ARIA labels/states, keyboard-operable result tabs, Escape handling, wizard focus management, `prefers-reduced-motion` support and a print stylesheet that removes application controls and avoids splitting cards where possible.
+The UI includes ARIA labels/states, a keyboard-operable section menu above Tags, a settings button beside the section menu on wide screens and narrow Core screens, or beside search and Add on narrow Selene screens, Escape handling, wizard focus management, `prefers-reduced-motion` support and a print stylesheet that removes application controls and avoids splitting cards where possible.
 
 ## Add a business plugin
 
@@ -267,7 +275,7 @@ node --check sw.js
 ./kite.sh
 ```
 
-Then verify in a browser that a first visit loads the default document in English, the Settings language buttons switch the whole interface to French and back without a reload, `Languages` becomes `Langues`, `Courses` becomes `Formations` and both return to English correctly, the selected locale persists after reload, search/filtering works in both languages, both result tabs work, add/save/import actions work, theme/layout/statistics preferences persist, and an installed/offline reload succeeds.
+Then verify in a browser that a first visit loads the default document in English, the Settings language buttons switch the whole interface to French and back without a reload, `Languages` becomes `Langues`, `Courses` becomes `Formations` and both return to English correctly, the selected locale persists after reload, search/filtering works in both languages, both section menu entries work, add/save/import actions work, theme/color-mode/layout/statistics preferences persist, and an installed/offline reload succeeds.
 
 ## Reproduce the repository from scratch
 

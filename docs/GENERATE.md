@@ -10,7 +10,7 @@ This document is a self-contained prompt intended for a capable coding agent. It
 - Reasoning effort used for this maintenance pass: **High**
 - Agent role: **front-end/PWA code-maintenance agent with local repository editing and validation tools**
 - Reference date: **2026-09-17**
-- Target Kite release: **v0.5.3**
+- Target Kite release: **v0.5.76**
 - Execution context used for maintenance: a Linux sandbox with filesystem/shell access, Python and Node.js available for validation; the application itself must not depend on those tools at runtime.
 - Reproducibility boundary: hidden chain-of-thought, private system prompts and platform-internal instructions are not application dependencies and must not be required. The generated repository must be justified by explicit source files, comments and executable/browser-visible behaviour.
 
@@ -100,7 +100,13 @@ kite/
     extensions/
       codecs/yaml/plugin.js
       themes/core/plugin.js
-      layouts/core/plugin.js
+      themes/core/style.css
+      themes/selene/plugin.js
+      themes/selene/style.css
+      layouts/classic/plugin.js
+      layouts/classic/style.css
+      layouts/workspace/plugin.js
+      layouts/workspace/style.css
     plugins/
       bookmarks/plugin.js
       cv/plugin.js
@@ -176,9 +182,9 @@ Implement a small runtime in `js/kernel/`.
 
 `js/shared/dom.js` must centralise:
 - escapeHtml(value);
-- sanitizeUrl(value): only http, https, mailto and tel;
+- sanitizeUrl(value): only http, https, file, mailto and tel;
 - sanitizeImageUrl(value): http/https plus validated base64 data URLs for PNG/JPEG/WebP/GIF;
-- isHttpUrl(value): http/https only.
+- isLinkUrl(value): http/https/file only.
 
 Never duplicate these rules in business plugins.
 
@@ -220,17 +226,21 @@ Reject structurally invalid indentation/input with clear English errors. Preserv
 
 # 11. Theme/layout extensions
 
-Theme plugin:
-- manifest id `org.kite.theme.core`, version `1.0.0`, kind `theme`;
-- register `system`, `light`, `dark` with canonical English labels System, Light, Dark.
+Theme plugins:
+- Core manifest id `org.kite.theme.core`, version `1.0.0`, kind `theme`; load its stylesheet and register the `core` family. Adapt Min Light and Min Dark by Miguel Solorio from https://github.com/miguelsolorio/min-theme to the Core roles; use their UI colors for surfaces and blue functional accents, and derive status roles from their token/terminal/diff colors. The Core search field uses the same 1px accent border as its buttons.
+- Selene manifest id `org.kite.theme.selene`, version `1.0.0`, kind `theme`; load its stylesheet and register the `selene` family.
+- Both families support `system`, `light` and `dark` color modes. The Settings dropdown is built from registered theme families. Keep the browser theme-color meta tag in sync with the selected palette background, including system color-scheme changes.
+- Each light and dark palette defines the same CSS roles: `background`, `landscape-primary`, `landscape-secondary`, `landscape-inverted`, `landscape-delimited`, `landscape-filled`, `inactive-primary`, `inactive-secondary`, `inactive-inverted`, `inactive-delimited`, `inactive-filled`, `active-primary`, `active-secondary`, `active-inverted`, `active-delimited`, `active-filled`, `hover`, `focus`, `accent`, `success-state`, `error-state`, `warning-state`, `pending-state` and `shadow`. Components use the roles instead of hard-coded colors; system mode follows the appropriate palette.
 
-Layout plugin:
-- manifest id `org.kite.layout.core`, version `1.0.0`, kind `layout`;
-- register `two-column` label “2 columns” and `one-page` label “One page”.
+Document layout plugins:
+- each layout has its own `plugin.js` and `style.css`, loads that stylesheet on activation, and registers one entry in the `layouts` registry;
+- `org.kite.layout.classic` registers `classic` (“Classic”): two columns above 760px and one document flow at 760px or less;
+- `org.kite.layout.workspace` registers `workspace` (“Workspace”): framed top bar and full-height sidebar;
+- every layout works with every theme. Settings generates layout buttons from the registry; theme stylesheets provide colors and component skin, while layout stylesheets own document geometry.
 
 # 12. Config
 
-`config/kite.json` points to `./data/default.yml`, loads exactly the YAML codec, core theme and core layout foundation modules, and defaults to theme `system` and layout `two-column`.
+`config/kite.json` points to `./data/default.yml`, loads the YAML codec, Core and Selene themes, and the two layout foundation modules. It defaults to theme `core`, color mode `system` and layout `classic`.
 
 # 13. i18n policy
 
@@ -247,8 +257,8 @@ Expose:
 - localizeStaticDom(root?)
 
 `LOCALES` must currently define exactly these immutable descriptors:
-- `en`: code `en`, flag `🇬🇧`, native name `English`;
-- `fr`: code `fr`, flag `🇫🇷`, native name `Français`.
+- `en`: code `en`, flag `United Kingdom flag`, native name `English`;
+- `fr`: code `fr`, flag `French flag`, native name `Français`.
 
 Settings language buttons MUST be generated from these descriptors rather than duplicated in `index.html`. Adding a future locale to `LOCALES` plus its dictionary variants must automatically make it selectable.
 
@@ -269,13 +279,13 @@ This deliberate overlap prevents stale plugin-view labels: `translateTerm()` can
 At minimum provide EN/FR variants for every UI phrase needed by:
 - settings open/close/panel;
 - interface Language label;
-- Theme / System / Light / Dark;
-- Layout / 2 columns / One page;
+- Theme / Core / Selene / System / Light / Dark;
+- Layout / 2 columns / One page / Workspace;
 - Statistics / Show / Hide;
 - Data / Import / Save and YAML ARIA labels;
 - Search and section-specific search;
 - Add/cancel/back controls;
-- Tags / Results / result sections / no-result copy;
+- Tags / Active content / active content sections / empty-content copy;
 - item/experience counters and statistics labels;
 - Duration, Location, Type, Format, Date, Contact details;
 - remove-item and rating ARIA strings;
@@ -360,26 +370,26 @@ Use shared helpers instead of copies.
 
 On start:
 1. generate language buttons from `supportedLocales()`;
-2. restore `kite.locale`, set `<html lang>`, and localise the static DOM;
+2. apply a valid `lang` URL override or restore `kite.locale`, set `<html lang>`, and localise the static DOM;
 3. bind events;
 4. load `config/kite.json`;
 5. load foundation modules;
-6. restore theme/layout/statistics preferences from localStorage;
+6. apply valid `theme`, `color`, `layout` and `stats` URL overrides, falling back to localStorage; migrate former Selene + two-column users to Workspace once;
 7. fetch/parse default YAML;
 8. load declared business plugins;
 9. select adapter(s), render document;
 10. register service worker.
 
-State includes config, active adapter/model/view, result sections, active section, source filename, selected tag, search query, statistics visibility, wizard step and unsaved-change badge counts.
+State includes config, active adapter/model/view, active content sections, active section, source filename, selected tag, search query, statistics visibility, wizard step and unsaved-change badge counts.
 
 Required UI behaviour:
-- App title “Kite” and translated APP_QUOTE in hero.
+- Settings places the document title in bold, the translated quote in italics, `· v0.5.76 ·`, and the GitHub link below a separator after the data management controls.
 - Search is diacritic-insensitive and matches both canonical and localised exact terms.
-- If several adapters match the same document (default document declares bookmarks + cv), show keyboard-operable result tabs.
-- Each result tab has a count; arrow keys/Home/End move among tabs.
+- Render the active content sections as a keyboard-operable tab menu in `contextMenu` above `tagsTitle`, including when the active section has no tags. Use a horizontal row in narrow `classic` and a vertical menu otherwise.
+- Each menu row keeps its item count aligned to the right; arrow keys/Home/End move among sections.
 - Active tag filter is contextual to the active section.
 - Tag pills can display 0..100% proportional fill for rates.
-- Bookmark cards open safe HTTP(S) links in new tabs with noopener.
+- Bookmark cards open safe HTTP(S) and file links in new tabs with noopener.
 - CV profile card has portrait/contact line/title/quote.
 - Experience cards display optional illustration, organization/title, duration/location/type/format metadata, skill tags, subtitle and achievements.
 - Achievement text may support only escaped `<b>...</b>` emphasis; all other markup remains escaped.
@@ -388,27 +398,39 @@ Required UI behaviour:
 - All user/document text inserted into HTML is escaped; all URLs go through shared safety helpers.
 
 Settings:
-- floating menu button toggles panel and changes ☰ / ×;
-- Language: generate one button per `LOCALES` entry; every button shows its flag emoji and native language name, exposes `aria-pressed`, and the active locale is visibly selected;
+- the Settings button beside `activeContentMenu` (or in `active-content-tools` on narrow Selene screens) uses a centered monochrome two-line filter SVG, colored with currentColor and sized by the active theme, toggles the panel and updates `aria-expanded`; show pending changes with the same 7.5px dot on Settings and Save, positioning the Settings dot at top/right -2px on the button's upper-right border and retaining the count in each accessible button label;
+- Language: generate one button per `LOCALES` entry; every button shows its flat country-flag SVG and native language name, exposes `aria-pressed`, and the active locale is visibly selected;
 - selecting a locale updates `<html lang>`, translates static `data-i18n*` content, rebuilds adapter views before rerendering dynamic translated content immediately, and emits `locale:changed`;
 - if the add-item wizard is open during a locale change, rebuild its translated labels/placeholders while preserving its current step and user-entered values, including an embedded illustration preview when present;
-- Theme: System/Light/Dark;
-- Layout: 2 columns/One page;
+- Theme: Core/Selene dropdown above System/Light/Dark color mode buttons;
+- Layout: generate Classic/Workspace controls from installed layout plugins; all combinations with Core and Selene are valid;
 - Statistics toggle;
 - Import and Save;
-- click outside or Escape closes panel.
+- click outside or Escape closes panel;
+- each setting change updates the five presentation parameters in the current URL with `history.replaceState`, preserving unrelated parameters and the fragment.
+
+URL parameters:
+- `lang`: installed locale code (`en` or `fr`);
+- `theme`: installed theme ID (`core` or `selene`);
+- `color`: `system`, `light` or `dark`;
+- `layout`: installed layout ID (`classic` or `workspace`; legacy `two-column` and `one-page` URLs map to `classic`);
+- `stats`: `true` or `false`.
+
+A valid URL choice takes priority for that page load without overwriting its saved preference. Missing or invalid choices fall back to saved preferences. An explicit `layout` bypasses the legacy Selene geometry migration for the current page, while the saved layout is still migrated once. Example: `?lang=fr&theme=selene&color=dark&layout=workspace&stats=true`.
 
 Preferences:
 - `kite.locale`
 - `kite.theme`
-- `kite.layout`
+- `kite.themeMode`
+- `kite.layout` (selected layout)
+- `kite.layoutVersion` (one-time migration of former Selene + two-column geometry to Workspace; reads legacy `kite.layoutSchemaVersion` when present)
 - `kite.statistics`
 
 Statistics:
-- optional panel below result tabs;
+- optional panel before the active content sections;
 - bookmarks: top 10 tag usage among displayed items;
 - structured CV: top 10 skill usage among displayed experiences;
-- show count, percentage and accessible labels.
+- show count, percentage and accessible labels; each tag pill fits its own text while all horizontal bars start in the same column.
 
 Wizard:
 - floating + opens it;
@@ -420,7 +442,7 @@ Wizard:
 
 Bookmarks wizard (3 steps):
 1. label;
-2. required valid HTTP/HTTPS URL;
+2. required valid HTTP/HTTPS/file URL;
 3. optional comma-separated tags, then add.
 
 CV wizard:
@@ -451,44 +473,47 @@ Save:
 # 17. Static HTML
 
 `index.html`:
-- `<html lang="en" data-theme="system" data-layout="two-column">` or equivalent defaults;
+- `<html lang="en" data-theme="core" data-theme-mode="system" data-layout="classic">` or equivalent defaults;
 - English canonical text in markup, converted at runtime using data-i18n attributes;
 - mobile viewport, manifest/icon links, theme-color metadata;
 - settings button/panel, language/theme/layout/statistics/data controls;
-- hero with title, quote, search, add button and wizard;
-- content shell with contextual tags and results;
-- no-results state;
-- footer linking to `https://github.com/Sylvain37/kite` and release `v0.5.3`;
+- context menu with a Settings button beside the section menu on wide screens and narrow Core screens; on narrow Selene screens Settings moves into the search/Add row above active content;
+- content shell with context menu and active content;
+- empty active content state;
+- document title, quote, release `v0.5.76` and GitHub link in `app-info`, placed in its own Settings section after the data controls;
 - toast region;
 - one module script `./js/main.js`.
 
 Use these exact DOM ids because main.js references them:
-settingsButton, settingsButtonIcon, settingsNotificationBadge, settingsPanel, languageOptions,
+settingsButton, settingsNotificationBadge, settingsPanel, languageOptions, themeSelect, layoutOptions,
 statisticsToggle, importButton, saveButton, saveNotificationBadge, fileInput,
-documentTitle, documentQuote, searchInput, addButton, wizard, wizardForm,
-wizardTrack, tagsPanel, tagsTitle, tagsList, itemsList, emptyState, toast.
+appName, appDescription, searchInput, addButton, wizard, wizardForm,
+wizardTrack, contextMenu, activeContentMenu, tagsTitle, tagsList, activeContent, itemsList, emptyState, toast.
 
-Language/theme/layout option buttons use data-locale-value / data-theme-value / data-layout-value respectively. The `languageOptions` container starts empty in canonical HTML and is populated from `js/i18n.js` at runtime.
+Language/color-mode/layout option buttons use data-locale-value / data-theme-mode-value / data-layout-value respectively. The `languageOptions`, `themeSelect` and `layoutOptions` controls start empty in canonical HTML and are populated at runtime. Rebuild the layout buttons after a locale change.
 
 # 18. CSS and visual design
 
-Create `css/app.css` with no external stylesheets.
+Create `css/app.css` for shared component rules. Core and Selene load their own theme stylesheets. The `classic` and `workspace` layout plugins each load a separate stylesheet for document geometry. Do not place layout rules in `css/app.css` or tie them to a theme selector.
 
 Design character:
-- strong dark hero/header;
-- yellow accent `#f7b500`;
+- theme-specific surfaces for the document and controls;
+- Core uses Min Light blue `#1976d2` and Min Dark blue `#79b8ff` for its accent;
 - light surface/background defaults and complete dark-theme token overrides;
-- centered max-width app shell around 1200px;
+- layout-specific shell widths and geometry;
 - rounded white/dark cards with shadows;
-- responsive two-column layout with sticky tags panel on desktop and stacked layout on narrow screens;
-- one-page layout override;
+- Selene landscape backgrounds use a subtle lightening gradient toward the upper-left corner, including hover surfaces, while print remains flat;
+- Selene uses the Add button landscape-primary background for tag pills, item tags, search, the wizard type selector, wizard text fields and illustration controls, statistics bars, theme selection and Settings action buttons, including active options;
+- responsive classic and framed workspace layouts, each usable with either theme;
 - compact pill tags, proportional rate fill, accessible focus rings;
-- floating settings button/panel;
+- search and Add share an aligned row above active content; Settings sits beside the section menu except on narrow Selene screens, where it joins that row. Core uses 36px controls and Selene scales control size and gaps to 75% while retaining text size;
+- the Add button rotates its plus glyph 45 degrees clockwise when the first wizard step opens, then shows an upright back arrow on later steps; the shared reduced-motion rule shortens this transition;
 - animated wizard track and settings groups;
 - result tabs;
 - profile/experience cards with portrait/illustration support;
-- statistics horizontal bars;
+- statistics horizontal bars with aligned starts and a usable fallback when subgrid is unsupported;
 - image upload/dropzone;
+- preserve multiline textarea height in Selene and visible keyboard focus for search, wizard fields, upload controls and document panels;
 - toast/error states;
 - reduced-motion media query;
 - print rules that hide `.no-print`, flatten shadows/backgrounds and avoid card fragmentation.
@@ -642,8 +667,8 @@ data:
 - id `./`
 - name/short_name `Kite`
 - lang `en`
-- theme_color `#f7b500`
-- background_color `#201e24`
+- theme_color `#f6f6f6`
+- background_color `#f6f6f6`
 - display `standalone`
 - start_url/scope `./`
 - 192x192 and 512x512 PNG icons, plus maskable 512.
@@ -653,7 +678,7 @@ Create a simple Kite favicon/logo in SVG and corresponding raster/icon files. As
 # 21. Service worker
 
 `sw.js`:
-- `CACHE_VERSION = "v0.5.3"`;
+- `CACHE_VERSION = "v0.5.76"`;
 - precache the complete shell including the new shared modules and constants;
 - installation: cache shell and skipWaiting;
 - activation: delete older caches and claim clients;
@@ -682,7 +707,7 @@ Write a polished GitHub-facing README in English that:
 - invites feedback/fixes through PRs and gives contribution expectations;
 - explicitly invites users to install the GitHub Pages PWA and contributors to submit focused PRs with screenshots for UI changes;
 - explains that the bundled CV is deliberately fictional, uses reserved/example contact data, and asks contributors to use fictional/minimised fixtures rather than personal data in PRs;
-- documents architecture, naming conventions, runtime language selection/i18n policy, how to add a locale, plugin contract, business plugins, YAML codec, import/save, themes/layout/statistics, offline behaviour, security, accessibility/print and validation;
+- documents architecture, naming conventions, runtime language selection/i18n policy, how to add a locale, plugin contract, business plugins, YAML codec, import/save, themes/layouts/statistics, offline behaviour, security, accessibility/print and validation;
 - links to `docs/GENERATE.md`;
 - reminds maintainers to add an explicit repository license before accepting third-party contributions if none exists.
 
@@ -709,7 +734,7 @@ B. YAML
 
 C. i18n
 - `<html lang="en">` renders English chrome at startup on a first visit with no stored locale preference;
-- Settings renders `🇬🇧 English` and `🇫🇷 Français` buttons from `LOCALES`, not hard-coded duplicate locale metadata;
+- Settings renders `United Kingdom flag English` and `French flag Français` buttons from `LOCALES`, not hard-coded duplicate locale metadata;
 - switching to English updates `<html lang="en">` and retranslates static controls, document-derived exact terms, counters, dates, search context and dynamic result cards immediately without reload;
 - the CV section heading `Langues` becomes `Languages` and `Formations` becomes `Courses` when switching to English;
 - switching back to French restores `Langues` and `Formations` as well as the rest of the French rendering, and `kite.locale` survives reload;
@@ -721,12 +746,16 @@ C. i18n
 - searching a known term finds it using either its English or French form.
 
 D. Browser smoke test
+
+- a URL with all five presentation parameters renders the selected locale, theme, color mode, layout and statistics on a fresh profile and with conflicting saved preferences;
+- changing any Settings choice updates all five URL parameters without reloading, preserving unrelated parameters and fragments;
+- unsupported URL values fall back to saved preferences; `stats=false` disables saved statistics; visiting an override URL does not overwrite saved preferences;
 - default document loads without console errors;
-- Bookmarks and CV result tabs both render;
-- keyboard result-tab navigation works;
+- Bookmarks and CV section rows render above Tags in the sidebar with counts aligned right;
+- keyboard navigation works in the vertical section menu;
 - search and tag filter work;
-- locale/theme/layout/statistics settings persist after reload;
-- bookmark wizard validates HTTP(S) URL and adds an item;
+- locale/theme/color-mode/layout/statistics settings persist after reload;
+- bookmark wizard validates HTTP(S)/file URL and adds an item;
 - CV wizard can add a language/course/experience;
 - image upload accepts JPEG/PNG/WebP and rejects other formats;
 - save downloads valid YAML and clears notification badges;

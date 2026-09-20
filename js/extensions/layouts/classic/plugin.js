@@ -1,8 +1,8 @@
-/** Core theme family and its self-contained stylesheet. */
+/** Self-contained classic document layout. */
 export const manifest = {
-  id: "org.kite.theme.core",
+  id: "org.kite.layout.classic",
   version: "1.0.0",
-  kind: "theme"
+  kind: "layout"
 };
 
 export async function activate(context) {
@@ -11,12 +11,12 @@ export async function activate(context) {
   stylesheet.href = new URL("./style.css", import.meta.url).href;
   const loaded = new Promise((resolve, reject) => {
     stylesheet.addEventListener("load", resolve, { once: true });
-    stylesheet.addEventListener("error", () => reject(new Error("Unable to load the Core theme stylesheet.")), { once: true });
+    stylesheet.addEventListener("error", () => reject(new Error("Unable to load the classic layout stylesheet.")), { once: true });
   });
   document.head.append(stylesheet);
   try {
     await loaded;
-    const unregister = context.themes.register("core", { id: "core", label: "Core" });
+    const unregister = context.layouts.register("classic", { id: "classic", label: "Classic", labelKey: "layoutClassic" });
     return () => {
       unregister();
       stylesheet.remove();

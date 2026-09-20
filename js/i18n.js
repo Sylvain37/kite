@@ -2,7 +2,7 @@
  * Lightweight internationalisation layer.
  *
  * English is both the canonical source language and the default display locale.
- * A previously stored `kite.locale` preference still wins at application startup;
+ * A valid `lang` URL parameter takes priority over the stored `kite.locale` preference;
  * this constant is the fallback used for first visits and unsupported locale codes.
  */
 export const DEFAULT_LOCALE = "en";
@@ -20,8 +20,8 @@ function freezeVariants(variants) {
  * switch. Add a matching variant to every translation entry when adding a locale.
  */
 export const LOCALES = Object.freeze({
-  en: Object.freeze({ code: "en", flag: "🇬🇧", name: "English" }),
-  fr: Object.freeze({ code: "fr", flag: "🇫🇷", name: "Français" })
+  en: Object.freeze({ code: "en", flag: "gb", name: "English" }),
+  fr: Object.freeze({ code: "fr", flag: "fr", name: "Français" })
 });
 
 export const TRANSLATIONS = Object.freeze({
@@ -39,12 +39,18 @@ export const TRANSLATIONS = Object.freeze({
   themeLight: freezeVariants({ en: "Light", fr: "Clair" }),
   themeDark: freezeVariants({ en: "Dark", fr: "Sombre" }),
   layout: freezeVariants({ en: "Layout", fr: "Disposition" }),
-  layoutTwoColumns: freezeVariants({ en: "2 columns", fr: "2 colonnes" }),
-  layoutOnePage: freezeVariants({ en: "One page", fr: "One-page" }),
+  layoutClassic: freezeVariants({ en: "Classic", fr: "Classique" }),
+  layoutWorkspace: freezeVariants({ en: "Workspace", fr: "Espace de travail" }),
   statistics: freezeVariants({ en: "Statistics", fr: "Statistiques" }),
+  itemCount: freezeVariants({ en: "Item count", fr: "Nombre d’éléments" }),
   show: freezeVariants({ en: "Show", fr: "Afficher" }),
   hide: freezeVariants({ en: "Hide", fr: "Masquer" }),
   data: freezeVariants({ en: "Data", fr: "Données" }),
+  applicationInformations: freezeVariants({ en: "Application Informations", fr: "Informations de l’application" }),
+  applicationName: freezeVariants({ en: "Name:", fr: "Nom :" }),
+  applicationDescription: freezeVariants({ en: "Description:", fr: "Description :" }),
+  applicationVersion: freezeVariants({ en: "Version:", fr: "Version :" }),
+  moreInfo: freezeVariants({ en: "More info:", fr: "Plus d’informations :" }),
   import: freezeVariants({ en: "Import", fr: "Importer" }),
   importYaml: freezeVariants({ en: "Import a YAML file", fr: "Importer un fichier YAML" }),
   save: freezeVariants({ en: "Save", fr: "Sauvegarder" }),
@@ -57,11 +63,12 @@ export const TRANSLATIONS = Object.freeze({
   addItemSection: freezeVariants({ en: "Add an item to {section}", fr: "Ajouter un élément dans {section}" }),
   cancelAdd: freezeVariants({ en: "Cancel adding", fr: "Annuler l'ajout" }),
   previousStep: freezeVariants({ en: "Go back to the previous step", fr: "Revenir à l'étape précédente" }),
+  contextMenu: freezeVariants({ en: "Context menu", fr: "Menu contextuel" }),
   tags: freezeVariants({ en: "Tags", fr: "Tags" }),
-  results: freezeVariants({ en: "Results", fr: "Résultats" }),
-  resultSections: freezeVariants({ en: "Result sections", fr: "Sections de résultats" }),
-  noResults: freezeVariants({ en: "No results", fr: "Aucun résultat" }),
-  noResultsHint: freezeVariants({ en: "Change the search or active filter.", fr: "Modifiez la recherche ou le filtre actif." }),
+  activeContent: freezeVariants({ en: "Active content", fr: "Contenu actif" }),
+  activeContentSections: freezeVariants({ en: "Active content sections", fr: "Sections du contenu actif" }),
+  noActiveContent: freezeVariants({ en: "No content to display", fr: "Aucun contenu à afficher" }),
+  noActiveContentHint: freezeVariants({ en: "Change the search or active filter.", fr: "Modifiez la recherche ou le filtre actif." }),
 
   // Statistics and counters.
   skillUsage: freezeVariants({ en: "Skill usage", fr: "Utilisation des compétences" }),
@@ -137,7 +144,7 @@ export const TRANSLATIONS = Object.freeze({
   removeIllustration: freezeVariants({ en: "Remove illustration", fr: "Retirer l’illustration" }),
 
   // User-facing errors and notifications.
-  invalidHttpUrl: freezeVariants({ en: "Enter a valid http:// or https:// URL.", fr: "Saisissez une URL http:// ou https:// valide." }),
+  invalidLinkUrl: freezeVariants({ en: "Enter a valid http://, https:// or file:// URL.", fr: "Saisissez une URL http://, https:// ou file:// valide." }),
   unsupportedYaml: freezeVariants({ en: "This file type is not supported. Use .yml or .yaml.", fr: "Ce type de fichier n'est pas pris en charge. Utilisez .yml ou .yaml." }),
   importedFile: freezeVariants({ en: "{name} imported.", fr: "{name} importé." }),
   yamlSaveReady: freezeVariants({ en: "YAML save prepared.", fr: "Sauvegarde YAML préparée." }),

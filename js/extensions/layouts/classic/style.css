@@ -1,0 +1,51 @@
+/* Two columns on wide screens; one document flow on narrow screens. */
+html:root[data-layout="classic"] .app-shell {
+  width: min(1200px, calc(100% - 32px));
+  margin: 32px auto 0;
+}
+html:root[data-layout="classic"] .content-shell {
+  display: grid;
+  grid-template-columns: minmax(190px, 260px) minmax(0, 1fr);
+  gap: 26px;
+  padding: 24px 20px 20px;
+}
+html:root[data-layout="classic"] .context-menu {
+  position: sticky;
+  top: 20px;
+  align-self: start;
+}
+@media (max-width: 760px) {
+  html:root[data-layout="classic"] .app-shell {
+    width: min(1200px, calc(100% - 18px));
+    margin: 0 auto;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+  }
+  html:root[data-layout="classic"] .content-shell {
+    display: block;
+    margin-inline: auto;
+    padding: 24px 20px 20px;
+  }
+  html:root[data-layout="classic"] .context-menu {
+    position: static;
+    margin-bottom: 22px;
+  }
+  html:root[data-layout="classic"] .active-content-menu {
+    flex-direction: row;
+    width: 100%;
+    gap: 8px;
+    overflow-x: auto;
+  }
+  html:root[data-layout="classic"] .active-content-menu-item {
+    flex: 0 0 auto;
+    width: auto;
+  }
+  html:root[data-layout="classic"] .active-content-menu-count { margin-left: 0; }
+  html:root[data-layout="classic"] #tagsTitle { display: none; }
+}
+
+@media print {
+  html:root[data-layout="classic"] .app-shell { width: 100%; margin: 0; }
+  html:root[data-layout="classic"] .content-shell { display: block; padding-top: 20px; }
+  html:root[data-layout="classic"] .context-menu { position: static; margin-bottom: 16px; }
+}

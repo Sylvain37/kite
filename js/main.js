@@ -5,12 +5,14 @@ import { downloadText, fetchJson, fetchText, getFileExtension, readLocalFile } f
 import { registerServiceWorker } from "./platform/pwa.js";
 import { currentLocale, localizeStaticDom, normalizeLocale, supportedLocales, t, translateTerm } from "./i18n.js";
 import { APP_QUOTE, APP_TITLE } from "./app/constants.js";
-import { escapeHtml, isHttpUrl, sanitizeImageUrl, sanitizeUrl } from "./shared/dom.js";
+import { escapeHtml, isLinkUrl, sanitizeImageUrl, sanitizeUrl } from "./shared/dom.js";
 
 /**
  * Application controller: coordinates the kernel, adapters and DOM rendering.
  * Domain-specific parsing stays in plugins; this module owns UI state and events.
  */
+
+const THEME_MODES = new Set(["system", "light", "dark"]);
 
 const runtime = createRuntime();
 const resolver = new DocumentPluginResolver(runtime);
@@ -28,6 +30,7 @@ const state = {
   selectedTag: null,
   query: "",
   showStatistics: false,
+  preferencesReady: false,
   wizardStep: 0,
   settingsNotificationCount: 0,
   saveNotificationCount: 0
@@ -36,25 +39,32 @@ const state = {
 const elements = {
   html: document.documentElement,
   settingsButton: document.querySelector("#settingsButton"),
-  settingsButtonIcon: document.querySelector("#settingsButtonIcon"),
   settingsNotificationBadge: document.querySelector("#settingsNotificationBadge"),
   settingsPanel: document.querySelector("#settingsPanel"),
   languageOptions: document.querySelector("#languageOptions"),
-  themeButtons: [...document.querySelectorAll("[data-theme-value]")],
-  layoutButtons: [...document.querySelectorAll("[data-layout-value]")],
+  themeSelect: document.querySelector("#themeSelect"),
+  themeColorMeta: document.querySelector('meta[name="theme-color"]'),
+  themeModeButtons: [...document.querySelectorAll("[data-theme-mode-value]")],
+  layoutOptions: document.querySelector("#layoutOptions"),
   statisticsToggle: document.querySelector("#statisticsToggle"),
   importButton: document.querySelector("#importButton"),
   saveButton: document.querySelector("#saveButton"),
   saveNotificationBadge: document.querySelector("#saveNotificationBadge"),
   fileInput: document.querySelector("#fileInput"),
-  title: document.querySelector("#documentTitle"),
-  quote: document.querySelector("#documentQuote"),
+  title: document.querySelector("#appName"),
+  quote: document.querySelector("#appDescription"),
   search: document.querySelector("#searchInput"),
   addButton: document.querySelector("#addButton"),
+  addButtonSymbol: document.querySelector("#addButton .add-button-symbol"),
   wizard: document.querySelector("#wizard"),
   wizardForm: document.querySelector("#wizardForm"),
   wizardTrack: document.querySelector("#wizardTrack"),
-  tagsPanel: document.querySelector("#tagsPanel"),
+  contextMenu: document.querySelector("#contextMenu"),
+  contextMenuNavigation: document.querySelector("#contextMenuNavigation"),
+  settingsSlot: document.querySelector(".context-menu-settings"),
+  activeContentTools: document.querySelector(".active-content-tools"),
+  activeContent: document.querySelector("#activeContent"),
+  activeContentMenu: document.querySelector("#activeContentMenu"),
   tagsTitle: document.querySelector("#tagsTitle"),
   tagsList: document.querySelector("#tagsList"),
   itemsList: document.querySelector("#itemsList"),
@@ -79,17 +89,44 @@ function setStoredPreference(key, value) {
   }
 }
 
+/** Valid URL choices override saved preferences without changing them on load. */
+function getUrlPreference(key, isValid) {
+  const value = new URLSearchParams(window.location.search).get(key)?.trim();
+  return value && isValid(value) ? value : null;
+}
+
+/** Keep the address shareable when a visitor changes a setting. */
+function syncUrlPreferences() {
+  const url = new URL(window.location.href);
+  url.searchParams.set("lang", currentLocale());
+  if (state.preferencesReady) {
+    url.searchParams.set("theme", elements.html.dataset.theme);
+    url.searchParams.set("color", elements.html.dataset.themeMode);
+    url.searchParams.set("layout", elements.html.dataset.layout);
+    url.searchParams.set("stats", String(state.showStatistics));
+  }
+  try {
+    window.history.replaceState(window.history.state, "", url);
+  } catch {
+    // Some local-file browsers do not allow changing the address bar.
+  }
+}
+
+const LOCALE_FLAG_SVGS = Object.freeze({
+  gb: '<svg class="language-option-flag" aria-hidden="true" viewBox="0 0 60 30" focusable="false"><rect width="60" height="30" fill="#012169"/><path d="M0 0 60 30M60 0 0 30" stroke="#fff" stroke-width="6"/><path d="M0 0 60 30M60 0 0 30" stroke="#c8102e" stroke-width="2"/><path d="M30 0v30M0 15h60" stroke="#fff" stroke-width="10"/><path d="M30 0v30M0 15h60" stroke="#c8102e" stroke-width="6"/></svg>',
+  fr: '<svg class="language-option-flag" aria-hidden="true" viewBox="0 0 3 2" focusable="false"><path d="M0 0h1v2H0z" fill="#002654"/><path d="M1 0h1v2H1z" fill="#fff"/><path d="M2 0h1v2H2z" fill="#ed2939"/></svg>'
+});
+
 /**
  * Build the locale buttons from js/i18n.js instead of hard-coding language
- * metadata into the document shell. This keeps locale availability, flag emoji
- * and language names in one maintainable place.
+ * metadata into the document shell. This keeps locale availability, flat flag
+ * SVGs and language names in one maintainable place.
  */
 function renderLanguageOptions() {
   elements.languageOptions.innerHTML = supportedLocales().map((locale) => `
     <button class="secondary-button setting-option language-option" type="button"
       data-locale-value="${escapeHtml(locale.code)}" aria-pressed="false" aria-label="${escapeHtml(locale.name)}">
-      <span class="language-option-flag" aria-hidden="true">${escapeHtml(locale.flag)}</span>
-      <span class="language-option-name" lang="${escapeHtml(locale.code)}">${escapeHtml(locale.name)}</span>
+      ${LOCALE_FLAG_SVGS[locale.flag] ?? ""}
     </button>`).join("");
 }
 
@@ -162,7 +199,9 @@ function applyLocale(locale, { persist = true, rerender = true } = {}) {
 
   localizeStaticDom();
   syncLanguageOptions();
-  elements.statisticsToggle.textContent = state.showStatistics ? t("hide") : t("show");
+  if (runtime.layouts.size) renderLayoutOptions();
+  elements.statisticsToggle.innerHTML = settingsOptionIcon("statistics");
+  elements.statisticsToggle.setAttribute("aria-label", state.showStatistics ? t("hide") : t("show"));
   updateSettingsNotification();
   updateSaveNotification();
 
@@ -179,36 +218,112 @@ function applyLocale(locale, { persist = true, rerender = true } = {}) {
   runtime.emit("locale:changed", value);
 }
 
-function applyTheme(theme) {
-  const value = runtime.themes.has(theme) ? theme : state.config.defaults.theme;
-  elements.html.dataset.theme = value;
-  elements.themeButtons.forEach((button) => {
-    const isActive = button.dataset.themeValue === value;
-    button.classList.toggle("is-active", isActive);
-    button.setAttribute("aria-pressed", String(isActive));
-  });
-  setStoredPreference("kite.theme", value);
-  runtime.emit("theme:changed", value);
+/** Theme plugins register families; each family supports the same three color modes. */
+function renderThemeOptions() {
+  elements.themeSelect.innerHTML = runtime.themes.entries().map(([id, theme]) =>
+    `<option value="${escapeHtml(id)}">${escapeHtml(theme.label)}</option>`
+  ).join("");
 }
 
-function applyLayout(layout) {
-  const value = runtime.layouts.has(layout) ? layout : state.config.defaults.layout;
-  elements.html.dataset.layout = value;
-  elements.layoutButtons.forEach((button) => {
-    const isActive = button.dataset.layoutValue === value;
+function syncBrowserThemeColor() {
+  const color = getComputedStyle(elements.html).getPropertyValue("--background").trim();
+  if (color) elements.themeColorMeta?.setAttribute("content", color);
+}
+
+function applyTheme(theme, mode = elements.html.dataset.themeMode, { persist = true } = {}) {
+  const value = runtime.themes.has(theme) ? theme : state.config.defaults.theme;
+  const selectedMode = THEME_MODES.has(mode) ? mode : "system";
+  elements.html.dataset.theme = value;
+  elements.html.dataset.themeMode = selectedMode;
+  syncBrowserThemeColor();
+  elements.themeSelect.value = value;
+  elements.themeModeButtons.forEach((button) => {
+    const isActive = button.dataset.themeModeValue === selectedMode;
     button.classList.toggle("is-active", isActive);
     button.setAttribute("aria-pressed", String(isActive));
   });
-  setStoredPreference("kite.layout", value);
+  if (persist) {
+    setStoredPreference("kite.theme", value);
+    setStoredPreference("kite.themeMode", selectedMode);
+  }
+  runtime.emit("theme:changed", { theme: value, mode: selectedMode });
+  syncSettingsPlacement();
+}
+
+/** Layout choices come from installed layout plugins, not the document shell. */
+function settingsOptionIcon(name) {
+  const paths = {
+    classic: '<path d="M4 5h16M4 12h16M4 19h16"/>',
+    workspace: '<path d="M4 4h6v16H4zM14 4h6v7h-6zM14 15h6v5h-6z"/>',
+    statistics: '<path d="M4 19V10M10 19V5M16 19v-7M22 19V8"/>'
+  };
+  return `<svg class="setting-option-icon" viewBox="0 0 24 24" aria-hidden="true">${paths[name] ?? paths.classic}</svg>`;
+}
+
+function renderLayoutOptions() {
+  elements.layoutOptions.innerHTML = runtime.layouts.entries().map(([id, layout]) => {
+    const label = layout.labelKey ? t(layout.labelKey) : layout.label ?? id;
+    return `<button class="secondary-button setting-option" type="button" data-layout-value="${escapeHtml(id)}" aria-pressed="false" aria-label="${escapeHtml(label)}">${settingsOptionIcon(id)}</button>`;
+  }).join("");
+  syncLayoutOptions();
+}
+
+function syncLayoutOptions() {
+  elements.layoutOptions.querySelectorAll("[data-layout-value]").forEach((button) => {
+    const isActive = button.dataset.layoutValue === elements.html.dataset.layout;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  });
+}
+
+const classicNarrowScreen = window.matchMedia("(max-width: 760px)");
+
+function syncSettingsPlacement() {
+  const target = classicNarrowScreen.matches && elements.html.dataset.theme === "selene"
+    ? elements.activeContentTools
+    : elements.contextMenuNavigation;
+  if (elements.settingsSlot.parentElement !== target) target.append(elements.settingsSlot);
+}
+
+/** Keep tags adjacent to the statistics panel in the compact document flow. */
+function syncTagsPlacement() {
+  if (!classicNarrowScreen.matches) {
+    if (elements.tagsList.previousElementSibling !== elements.tagsTitle) {
+      elements.tagsTitle.after(elements.tagsList);
+    }
+    return;
+  }
+
+  const statisticsPanel = elements.itemsList.querySelector("#statisticsPanel");
+  if (statisticsPanel) statisticsPanel.after(elements.tagsList);
+  else elements.itemsList.prepend(elements.tagsList);
+}
+
+function syncActiveContentMenuOrientation() {
+  const horizontal = classicNarrowScreen.matches;
+  elements.activeContentMenu.setAttribute("aria-orientation", horizontal ? "horizontal" : "vertical");
+}
+
+function applyLayout(layout, { persist = true } = {}) {
+  const fallback = runtime.layouts.has(state.config.defaults.layout)
+    ? state.config.defaults.layout
+    : runtime.layouts.keys()[0];
+  const value = runtime.layouts.has(layout) ? layout : fallback;
+  if (!value) throw new Error("No document layouts are installed.");
+  elements.html.dataset.layout = value;
+  syncActiveContentMenuOrientation();
+  syncLayoutOptions();
+  if (persist) setStoredPreference("kite.layout", value);
   runtime.emit("layout:changed", value);
 }
 
-function applyStatisticsVisibility(enabled) {
+function applyStatisticsVisibility(enabled, { persist = true } = {}) {
   state.showStatistics = Boolean(enabled);
   elements.statisticsToggle.classList.toggle("is-active", state.showStatistics);
   elements.statisticsToggle.setAttribute("aria-pressed", String(state.showStatistics));
-  elements.statisticsToggle.textContent = state.showStatistics ? t("hide") : t("show");
-  setStoredPreference("kite.statistics", state.showStatistics ? "true" : "false");
+  elements.statisticsToggle.innerHTML = settingsOptionIcon("statistics");
+  elements.statisticsToggle.setAttribute("aria-label", state.showStatistics ? t("hide") : t("show"));
+  if (persist) setStoredPreference("kite.statistics", state.showStatistics ? "true" : "false");
   renderStatistics();
 }
 
@@ -306,7 +421,7 @@ function filteredItems(view = state.view) {
 }
 
 function activeSectionTags() {
-  const section = activeResultSection() ?? state.sections[0] ?? null;
+  const section = activeContentSection() ?? state.sections[0] ?? null;
   if (!section) return [];
 
   const usedTags = new Map();
@@ -345,7 +460,9 @@ function activeSectionTags() {
 
 function renderTags() {
   const tags = activeSectionTags();
-  elements.tagsPanel.hidden = tags.length === 0;
+  elements.contextMenu.hidden = false;
+  elements.tagsTitle.hidden = tags.length === 0;
+  elements.tagsList.hidden = tags.length === 0;
   elements.tagsList.innerHTML = tags.map((tag) => {
     const active = String(tag.id) === String(state.selectedTag);
     const rawRate = tag.rate;
@@ -358,9 +475,10 @@ function renderTags() {
       : "";
     return `<button class="tag-pill${active ? " is-active" : ""}" type="button" data-tag-id="${escapeHtml(tag.id)}" aria-pressed="${active}"${rateAttributes}><span>${escapeHtml(translateTerm(tag.label))}</span></button>`;
   }).join("");
+  syncTagsPlacement();
 }
 
-function statisticsData(section = activeResultSection()) {
+function statisticsData(section = activeContentSection()) {
   if (!section) return null;
 
   const sectionId = String(section.id);
@@ -402,7 +520,7 @@ function statisticsData(section = activeResultSection()) {
   };
 }
 
-function statisticsMarkup(section = activeResultSection()) {
+function statisticsMarkup(section = activeContentSection()) {
   if (!state.showStatistics) return "";
   const data = statisticsData(section);
   if (!data) return "";
@@ -410,9 +528,9 @@ function statisticsMarkup(section = activeResultSection()) {
   const body = data.entries.length
     ? `<div class="statistics-chart" role="list" aria-label="${escapeHtml(data.title)}">${data.entries.map((entry) => `
         <div class="statistics-row" role="listitem">
-          <span class="statistics-label" title="${escapeHtml(entry.label)}">${escapeHtml(entry.label)}</span>
+          <span class="item-tag" title="${escapeHtml(entry.label)}">${escapeHtml(entry.label)}</span>
           <span class="statistics-bar" aria-hidden="true"><span style="--statistics-value: ${entry.percent}%"></span></span>
-          <span class="statistics-value" aria-label="${escapeHtml(t("countOutOfTotal", { count: entry.count, total: data.totalItems, percent: entry.percent }))}">${entry.count} · ${entry.percent}%</span>
+          <span class="statistics-value" aria-label="${entry.count}">${entry.count}</span>
         </div>`).join("")}
       </div>`
     : `<p class="statistics-empty">${escapeHtml(data.emptyLabel)}</p>`;
@@ -420,9 +538,12 @@ function statisticsMarkup(section = activeResultSection()) {
   return `<section id="statisticsPanel" class="statistics-panel no-print" aria-labelledby="statisticsTitle">
     <div class="statistics-heading">
       <h3 id="statisticsTitle">${escapeHtml(data.title)}</h3>
-      <span>${data.totalItems} ${escapeHtml(data.itemLabel)}</span>
     </div>
     ${body}
+    <div class="statistics-count">
+      <h3 class="count-heading">${escapeHtml(t("itemCount"))}</h3>
+      <span class="statistics-total">${data.totalItems} ${escapeHtml(data.itemLabel)}</span>
+    </div>
   </section>`;
 }
 
@@ -445,9 +566,7 @@ function renderStatistics() {
     return;
   }
 
-  const tabs = elements.itemsList.querySelector(".result-tabs");
-  if (tabs) tabs.insertAdjacentElement("afterend", next);
-  else elements.itemsList.prepend(next);
+  elements.itemsList.prepend(next);
 }
 
 function displayValue(value) {
@@ -790,7 +909,7 @@ function renderItem(item, section) {
   </article>`;
 }
 
-// ---- Multi-adapter result sections -------------------------------------------------
+// ---- Multi-adapter active content sections -------------------------------------------------
 
 function sectionDomSuffix(id) {
   const words = String(id).split(/[^a-zA-Z0-9]+/).filter(Boolean);
@@ -798,16 +917,16 @@ function sectionDomSuffix(id) {
   return suffix || "Document";
 }
 
-function activeResultSection() {
+function activeContentSection() {
   return state.sections.find((section) => String(section.id) === String(state.activeSection)) ?? null;
 }
 
-function activeResultAdapter() {
-  return activeResultSection()?.adapter ?? null;
+function activeContentAdapter() {
+  return activeContentSection()?.adapter ?? null;
 }
 
 function syncContextualTools() {
-  const section = activeResultSection();
+  const section = activeContentSection();
   const sectionId = section ? String(section.id) : "";
   const canAdd = typeof section?.adapter?.add === "function";
   const sectionName = translateTerm(sectionId);
@@ -819,13 +938,13 @@ function syncContextualTools() {
   elements.wizard.setAttribute("aria-label", sectionId ? t("addItemSection", { section: sectionName }) : t("addItem"));
 
   if (elements.wizard.hidden) {
-    elements.addButton.textContent = "+";
+    elements.addButtonSymbol.textContent = "+";
     elements.addButton.setAttribute("aria-label", sectionId ? t("addItemSection", { section: sectionName }) : t("addItem"));
     elements.addButton.setAttribute("aria-expanded", "false");
   }
 }
 
-function selectResultSection(id, { focus = false } = {}) {
+function selectActiveContentSection(id, { focus = false } = {}) {
   const sectionId = String(id ?? "");
   if (!state.sections.some((section) => String(section.id) === sectionId)) return;
 
@@ -836,14 +955,14 @@ function selectResultSection(id, { focus = false } = {}) {
   state.activeSection = sectionId;
 
   if (sectionChanged && hadSelectedTag) {
-    renderItems();
-    if (focus) elements.itemsList.querySelector(`[data-result-tab="${CSS.escape(sectionId)}"]`)?.focus();
+    renderActiveContent();
+    if (focus) elements.activeContentMenu.querySelector(`[data-active-content-section="${CSS.escape(sectionId)}"]`)?.focus();
   } else {
-    const tabs = [...elements.itemsList.querySelectorAll("[role=\"tab\"]")];
+    const tabs = [...elements.activeContentMenu.querySelectorAll("[role=\"tab\"]")];
     const panels = [...elements.itemsList.querySelectorAll("[role=\"tabpanel\"]")];
 
     tabs.forEach((tab) => {
-      const isActive = tab.dataset.resultTab === sectionId;
+      const isActive = tab.dataset.activeContentSection === sectionId;
       tab.classList.toggle("is-active", isActive);
       tab.setAttribute("aria-selected", String(isActive));
       tab.tabIndex = isActive ? 0 : -1;
@@ -860,7 +979,7 @@ function selectResultSection(id, { focus = false } = {}) {
   syncContextualTools();
 }
 
-function renderItems() {
+function renderActiveContent() {
   let totalCount = 0;
   const tabs = [];
   const sections = [];
@@ -877,32 +996,32 @@ function renderItems() {
     totalCount += count;
 
     const domSuffix = sectionDomSuffix(sectionId);
-    const tabId = `resultsTab${domSuffix}`;
-    const panelId = `resultsSection${domSuffix}`;
+    const tabId = `activeContentMenuItem${domSuffix}`;
+    const panelId = `activeContentSection${domSuffix}`;
     const isActive = sectionId === activeSection;
     const countLabel = `${count} ${t(count === 1 ? "itemSingular" : "itemPlural")}`;
 
-    tabs.push(`<button id="${escapeHtml(tabId)}" class="result-tab${isActive ? " is-active" : ""}" type="button" role="tab" aria-selected="${isActive}" aria-controls="${escapeHtml(panelId)}" tabindex="${isActive ? "0" : "-1"}" data-result-tab="${escapeHtml(sectionId)}">
+    tabs.push(`<button id="${escapeHtml(tabId)}" class="active-content-menu-item${isActive ? " is-active" : ""}" type="button" role="tab" aria-selected="${isActive}" aria-controls="${escapeHtml(panelId)}" tabindex="${isActive ? "0" : "-1"}" data-active-content-section="${escapeHtml(sectionId)}">
       <span>${escapeHtml(translateTerm(sectionId))}</span>
-      <span class="result-tab-count" aria-label="${escapeHtml(countLabel)}">${count}</span>
+      <span class="active-content-menu-count" aria-label="${escapeHtml(countLabel)}">${count}</span>
     </button>`);
 
-    const resultsCount = sectionId === "bookmarks" || sectionId === "cv"
+    const activeContentCount = sectionId === "bookmarks" || sectionId === "cv"
       ? ""
-      : `<p class="results-count">${countLabel}</p>`;
+      : `<p class="active-content-count">${countLabel}</p>`;
 
-    sections.push(`<section id="${escapeHtml(panelId)}" class="result-section" role="tabpanel" tabindex="0" data-plugin-section="${escapeHtml(sectionId)}" aria-labelledby="${escapeHtml(tabId)}"${isActive ? "" : " hidden"}>
-      <h3 class="result-section-title result-section-print-title">${escapeHtml(translateTerm(sectionId))}</h3>
-      ${resultsCount}
-      <div class="result-section-items">${items.map((item) => renderItem(item, section)).join("")}</div>
+    sections.push(`<section id="${escapeHtml(panelId)}" class="active-content-section" role="tabpanel" tabindex="0" data-plugin-section="${escapeHtml(sectionId)}" aria-labelledby="${escapeHtml(tabId)}"${isActive ? "" : " hidden"}>
+      <h3 class="active-content-section-title active-content-section-print-title">${escapeHtml(translateTerm(sectionId))}</h3>
+      ${activeContentCount}
+      <div class="active-content-section-items">${items.map((item) => renderItem(item, section)).join("")}</div>
     </section>`);
   }
 
-  const tabList = tabs.length
-    ? `<div class="result-tabs no-print" role="tablist" aria-label="${escapeHtml(t("resultSections"))}">${tabs.join("")}</div>`
-    : "";
+  elements.activeContentMenu.setAttribute("aria-label", t("activeContentSections"));
+  elements.activeContentMenu.innerHTML = tabs.join("");
+  elements.activeContentMenu.hidden = tabs.length === 0;
   const statistics = statisticsMarkup(state.sections.find((section) => String(section.id) === activeSection) ?? null);
-  elements.itemsList.innerHTML = `${tabList}${statistics}${sections.join("")}`;
+  elements.itemsList.innerHTML = `${statistics}${sections.join("")}`;
   elements.emptyState.hidden = totalCount > 0;
 }
 
@@ -910,8 +1029,10 @@ function render() {
   if (!state.view) return;
   document.title = APP_TITLE;
   elements.title.textContent = APP_TITLE;
-  setOptionalText(elements.quote, translateTerm(APP_QUOTE));
-  renderItems();
+  const appQuote = translateTerm(APP_QUOTE);
+  const footerQuote = appQuote.startsWith(APP_TITLE + " ") ? appQuote.slice(APP_TITLE.length + 1) : appQuote;
+  setOptionalText(elements.quote, footerQuote);
+  renderActiveContent();
   renderTags();
   syncContextualTools();
 }
@@ -919,7 +1040,7 @@ function render() {
 function toggleTag(id) {
   state.selectedTag = String(state.selectedTag) === String(id) ? null : id;
   renderTags();
-  renderItems();
+  renderActiveContent();
 }
 
 function prefersReducedMotion() {
@@ -1092,18 +1213,18 @@ function setWizardStep(step) {
   [...elements.wizardTrack.children].forEach((child) => { child.style.width = `${100 / count}%`; });
   elements.wizardTrack.style.transform = `translateX(-${state.wizardStep * (100 / count)}%)`;
   if (!elements.wizard.hidden) {
-    elements.addButton.textContent = state.wizardStep > 0 ? "↩" : "×";
+    elements.addButton.classList.toggle("is-previous", state.wizardStep > 0);
+    elements.addButtonSymbol.textContent = state.wizardStep > 0 ? "↩" : "+";
     elements.addButton.setAttribute("aria-label", state.wizardStep > 0 ? t("previousStep") : t("cancelAdd"));
   }
   focusWizardStep(state.wizardStep);
 }
 
 function openWizard() {
-  const adapter = activeResultAdapter();
+  const adapter = activeContentAdapter();
   if (typeof adapter?.add !== "function") return;
   configureWizard();
   elements.addButton.classList.add("is-cancel");
-  elements.addButton.textContent = "×";
   elements.addButton.setAttribute("aria-label", t("cancelAdd"));
   elements.addButton.setAttribute("aria-expanded", "true");
   elements.wizardForm.reset();
@@ -1117,8 +1238,8 @@ function openWizard() {
 function closeWizard() {
   elements.wizard.classList.remove("is-open");
   elements.wizard.hidden = true;
-  elements.addButton.classList.remove("is-cancel");
-  elements.addButton.textContent = "+";
+  elements.addButton.classList.remove("is-cancel", "is-previous");
+  elements.addButtonSymbol.textContent = "+";
   elements.addButton.setAttribute("aria-label", t("addItem"));
   elements.addButton.setAttribute("aria-expanded", "false");
   state.wizardStep = 0;
@@ -1130,8 +1251,8 @@ function validateWizardStep() {
   const step = visibleWizardStep();
   if (!step) return true;
   for (const control of step.querySelectorAll("input:not([disabled]), select:not([disabled]), textarea:not([disabled])")) {
-    if (control.type === "url" && control.required && control.value.trim() && !isHttpUrl(control.value)) {
-      control.setCustomValidity(t("invalidHttpUrl"));
+    if (control.type === "url" && control.required && control.value.trim() && !isLinkUrl(control.value)) {
+      control.setCustomValidity(t("invalidLinkUrl"));
     } else {
       control.setCustomValidity("");
     }
@@ -1152,7 +1273,6 @@ function getWizardValues() {
 
 function updateSettingsNotification() {
   const count = Math.max(0, Number(state.settingsNotificationCount) || 0);
-  elements.settingsNotificationBadge.textContent = count > 99 ? "99+" : String(count);
   elements.settingsNotificationBadge.hidden = count === 0;
 
   const open = !elements.settingsPanel.hidden;
@@ -1165,7 +1285,6 @@ function updateSettingsNotification() {
 
 function updateSaveNotification() {
   const count = Math.max(0, Number(state.saveNotificationCount) || 0);
-  elements.saveNotificationBadge.textContent = count > 99 ? "99+" : String(count);
   elements.saveNotificationBadge.hidden = count === 0;
 
   const notificationLabel = count > 0
@@ -1198,7 +1317,7 @@ function submitWizardStep() {
     return;
   }
 
-  const adapter = activeResultAdapter();
+  const adapter = activeContentAdapter();
   if (typeof adapter?.add !== "function") {
     closeWizard();
     return;
@@ -1244,21 +1363,17 @@ function saveDocument() {
   showToast(t("yamlSaveReady"));
 }
 
+
 function toggleSettings(force) {
   const open = typeof force === "boolean" ? force : elements.settingsPanel.hidden;
 
   if (open) {
     elements.settingsPanel.hidden = false;
-    elements.settingsPanel.classList.remove("is-opening");
-    void elements.settingsPanel.offsetWidth;
-    elements.settingsPanel.classList.add("is-opening");
   } else {
     elements.settingsPanel.hidden = true;
-    elements.settingsPanel.classList.remove("is-opening");
   }
 
-  elements.settingsButton.classList.toggle("is-cancel", open);
-  elements.settingsButtonIcon.textContent = open ? "×" : "☰";
+  elements.activeContent.classList.toggle("is-settings-open", open);
   elements.settingsButton.setAttribute("aria-expanded", String(open));
   updateSettingsNotification();
 }
@@ -1267,17 +1382,43 @@ function toggleSettings(force) {
 
 function bindEvents() {
   elements.settingsButton.addEventListener("click", () => toggleSettings());
+  elements.contextMenu.addEventListener("click", (event) => {
+    if (!elements.settingsPanel.hidden && !event.target.closest("#settingsButton")) toggleSettings(false);
+  });
   elements.languageOptions.addEventListener("click", (event) => {
     const button = event.target.closest("[data-locale-value]");
-    if (button) applyLocale(button.dataset.localeValue);
+    if (button) {
+      applyLocale(button.dataset.localeValue);
+      syncUrlPreferences();
+    }
   });
-  elements.themeButtons.forEach((button) => {
-    button.addEventListener("click", () => applyTheme(button.dataset.themeValue));
+  elements.themeSelect.addEventListener("change", () => {
+    applyTheme(elements.themeSelect.value);
+    syncUrlPreferences();
   });
-  elements.layoutButtons.forEach((button) => {
-    button.addEventListener("click", () => applyLayout(button.dataset.layoutValue));
+  window.matchMedia?.("(prefers-color-scheme: dark)")?.addEventListener?.("change", syncBrowserThemeColor);
+  classicNarrowScreen.addEventListener("change", () => {
+    syncActiveContentMenuOrientation();
+    syncSettingsPlacement();
+    syncTagsPlacement();
   });
-  elements.statisticsToggle.addEventListener("click", () => applyStatisticsVisibility(!state.showStatistics));
+  elements.themeModeButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      applyTheme(elements.html.dataset.theme, button.dataset.themeModeValue);
+      syncUrlPreferences();
+    });
+  });
+  elements.layoutOptions.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-layout-value]");
+    if (button && elements.layoutOptions.contains(button)) {
+      applyLayout(button.dataset.layoutValue);
+      syncUrlPreferences();
+    }
+  });
+  elements.statisticsToggle.addEventListener("click", () => {
+    applyStatisticsVisibility(!state.showStatistics);
+    syncUrlPreferences();
+  });
   elements.importButton.addEventListener("click", () => elements.fileInput.click());
   elements.saveButton.addEventListener("click", saveDocument);
   elements.fileInput.addEventListener("change", async () => {
@@ -1295,7 +1436,7 @@ function bindEvents() {
 
   elements.search.addEventListener("input", () => {
     state.query = elements.search.value;
-    renderItems();
+    renderActiveContent();
   });
 
   elements.tagsList.addEventListener("click", (event) => {
@@ -1303,29 +1444,29 @@ function bindEvents() {
     if (button) toggleTag(button.dataset.tagId);
   });
 
-  elements.itemsList.addEventListener("click", (event) => {
-    const tab = event.target.closest("[data-result-tab]");
-    if (tab) {
-      selectResultSection(tab.dataset.resultTab);
-      return;
-    }
+  elements.activeContentMenu.addEventListener("click", (event) => {
+    const tab = event.target.closest("[data-active-content-section]");
+    if (tab) selectActiveContentSection(tab.dataset.activeContentSection);
+  });
 
+  elements.itemsList.addEventListener("click", (event) => {
     const button = event.target.closest("[data-remove-id]");
     if (!button) return;
     const adapter = runtime.documents.get(button.dataset.removePlugin);
     if (typeof adapter?.remove !== "function") return;
     const removed = adapter.remove(state.model, button.dataset.removeId);
     if (removed) {
+      incrementChangeNotifications();
       refreshView();
       runtime.emit("document:changed", { operation: "remove", plugin: adapter.id });
     }
   });
 
-  elements.itemsList.addEventListener("keydown", (event) => {
+  elements.activeContentMenu.addEventListener("keydown", (event) => {
     const currentTab = event.target.closest("[role=\"tab\"]");
     if (!currentTab) return;
 
-    const tabs = [...elements.itemsList.querySelectorAll("[role=\"tab\"]")];
+    const tabs = [...elements.activeContentMenu.querySelectorAll("[role=\"tab\"]")];
     const currentIndex = tabs.indexOf(currentTab);
     if (currentIndex < 0) return;
 
@@ -1337,7 +1478,7 @@ function bindEvents() {
     if (nextIndex == null) return;
 
     event.preventDefault();
-    selectResultSection(tabs[nextIndex].dataset.resultTab, { focus: true });
+    selectActiveContentSection(tabs[nextIndex].dataset.activeContentSection, { focus: true });
   });
 
   elements.addButton.addEventListener("click", () => {
@@ -1397,25 +1538,52 @@ function bindEvents() {
     else if (!elements.settingsPanel.hidden) toggleSettings(false);
   });
 
-  document.addEventListener("click", (event) => {
-    if (elements.settingsPanel.hidden) return;
-    if (elements.settingsPanel.contains(event.target) || elements.settingsButton.contains(event.target)) return;
-    toggleSettings(false);
-  });
 }
 
 async function start() {
   renderLanguageOptions();
-  applyLocale(getStoredPreference("kite.locale", currentLocale()), { persist: false, rerender: false });
+  const urlLocale = getUrlPreference("lang", (value) =>
+    supportedLocales().some((locale) => locale.code === value));
+  applyLocale(urlLocale ?? getStoredPreference("kite.locale", currentLocale()),
+    { persist: false, rerender: false });
   bindEvents();
   updateSettingsNotification();
   updateSaveNotification();
   state.config = await fetchJson("./config/kite.json");
   await loadFoundationModules(runtime, state.config.foundation);
 
-  applyTheme(getStoredPreference("kite.theme", state.config.defaults.theme));
-  applyLayout(getStoredPreference("kite.layout", state.config.defaults.layout));
-  applyStatisticsVisibility(getStoredPreference("kite.statistics", "false") === "true");
+  renderThemeOptions();
+  renderLayoutOptions();
+  const storedTheme = getStoredPreference("kite.theme", state.config.defaults.theme);
+  // Existing installations stored the color mode in kite.theme.
+  const legacyMode = THEME_MODES.has(storedTheme) ? storedTheme : state.config.defaults.themeMode;
+  const theme = THEME_MODES.has(storedTheme) ? "core" : storedTheme;
+  const urlTheme = getUrlPreference("theme", (value) => runtime.themes.has(value));
+  const urlMode = getUrlPreference("color", (value) => THEME_MODES.has(value));
+  applyTheme(urlTheme ?? theme, urlMode ?? getStoredPreference("kite.themeMode", legacyMode),
+    { persist: urlTheme === null && urlMode === null });
+
+  const storedLayout = getStoredPreference("kite.layout", state.config.defaults.layout);
+  // Preserve Selene's former workspace geometry for existing installations.
+  const layoutVersion = getStoredPreference("kite.layoutVersion",
+    getStoredPreference("kite.layoutSchemaVersion", ""));
+  const legacySeleneLayout = layoutVersion !== "1"
+    && theme === "selene" && storedLayout === "two-column";
+  const savedLayout = legacySeleneLayout ? "workspace"
+    : (storedLayout === "two-column" || storedLayout === "one-page" ? "classic" : storedLayout);
+  if (savedLayout !== storedLayout) setStoredPreference("kite.layout", savedLayout);
+  const urlLayout = getUrlPreference("layout", (value) =>
+    runtime.layouts.has(value) || value === "two-column" || value === "one-page");
+  const resolvedUrlLayout = urlLayout === "two-column" || urlLayout === "one-page" ? "classic" : urlLayout;
+  applyLayout(resolvedUrlLayout ?? savedLayout, { persist: urlLayout === null });
+  setStoredPreference("kite.layoutVersion", "1");
+
+  const urlStatistics = getUrlPreference("stats", (value) => value === "true" || value === "false");
+  applyStatisticsVisibility(
+    (urlStatistics ?? getStoredPreference("kite.statistics", "false")) === "true",
+    { persist: urlStatistics === null }
+  );
+  state.preferencesReady = true;
 
   await loadConfiguredDocument();
   await registerServiceWorker();

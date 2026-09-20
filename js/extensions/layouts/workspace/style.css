@@ -1,0 +1,89 @@
+/* Framed workspace: sidebar spans the top bar and active content area. */
+html:root[data-layout="workspace"] .app-shell {
+  width: min(1320px, calc(100% - 40px));
+  margin: 52px auto 28px;
+  overflow: hidden;
+  background: var(--landscape-primary-surface, var(--landscape-primary));
+  border: 1px solid var(--landscape-delimited);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+}
+html:root[data-layout="workspace"] .app-shell main {
+  display: grid;
+  grid-template-columns: minmax(180px, 230px) minmax(0, 1fr);
+  min-height: 50vh;
+}
+html:root[data-layout="workspace"] .content-shell { display: contents; }
+html:root[data-layout="workspace"] .context-menu {
+  grid-column: 1;
+  grid-row: 1;
+  position: static;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 25px 13px;
+  background: var(--landscape-secondary-surface, var(--landscape-secondary));
+  border-right: 1px solid var(--landscape-delimited);
+}
+html:root[data-layout="workspace"] .active-content {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+  padding: 25px 30px 34px;
+}
+html:root[data-layout="workspace"] .context-menu h2,
+html:root[data-layout="workspace"] .active-content-section-title { text-align: left; }
+html:root[data-layout="workspace"] .context-menu h2 { padding-inline: 9px; }
+html:root[data-layout="workspace"] .tags-list {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 3px;
+}
+html:root[data-layout="workspace"] .tag-pill {
+  width: fit-content;
+  text-align: left;
+}
+html:root[data-layout="workspace"] footer {
+  border-top: 1px solid var(--landscape-delimited);
+}
+
+@media (max-width: 760px) {
+  html:root[data-layout="workspace"] .app-shell { width: calc(100% - 24px); margin: 16px auto; }
+  html:root[data-layout="workspace"] .app-shell main { display: block; min-height: 0; }
+  html:root[data-layout="workspace"] .content-shell { display: block; }
+  html:root[data-layout="workspace"] .context-menu {
+    padding: 16px;
+    border-right: 0;
+    border-bottom: 1px solid var(--landscape-delimited);
+  }
+  html:root[data-layout="workspace"] .active-content-menu {
+    flex-direction: row;
+    width: 100%;
+    gap: 8px;
+    overflow-x: auto;
+  }
+  html:root[data-layout="workspace"] .active-content-menu-item { flex: 0 0 auto; width: auto; }
+  html:root[data-layout="workspace"] .active-content-menu-count { margin-left: 0; }
+  html:root[data-layout="workspace"] .tags-list { flex-direction: row; flex-wrap: wrap; }
+  html:root[data-layout="workspace"] .tag-pill { width: auto; }
+  html:root[data-layout="workspace"] .active-content { padding: 20px 16px 26px; }
+}
+
+@media print {
+  html:root[data-layout="workspace"] .app-shell {
+    width: 100%;
+    min-height: 0;
+    margin: 0;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  html:root[data-layout="workspace"] .app-shell main { display: block; min-height: 0; }
+  html:root[data-layout="workspace"] .content-shell { display: block; padding-top: 20px; }
+  html:root[data-layout="workspace"] .context-menu { padding: 0; margin-bottom: 16px; border: 0; }
+  html:root[data-layout="workspace"] .tags-list { flex-direction: row; flex-wrap: wrap; }
+  html:root[data-layout="workspace"] .tag-pill { width: auto; }
+  html:root[data-layout="workspace"] .active-content { padding: 0; }
+}

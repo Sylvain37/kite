@@ -1,0 +1,340 @@
+/* Selene uses the same color roles as Core, with its own light and dark values. */
+html[data-theme="selene"] {
+  --background: #ededef;
+  --landscape-primary: #ffffff;
+  --landscape-secondary: #f7f7f9;
+  --landscape-inverted: #27282d;
+  --landscape-delimited: #dedee3;
+  --landscape-filled: #ffffff;
+  --inactive-primary: #27282d;
+  --inactive-secondary: #696b74;
+  --inactive-inverted: #ffffff;
+  --inactive-delimited: #dedee3;
+  --inactive-filled: #f4f4f6;
+  --active-primary: #27282d;
+  --active-secondary: #696b74;
+  --active-inverted: #ffffff;
+  --active-delimited: #5c63bd;
+  --active-filled: #e9eaf3;
+  --hover: #5c63bd;
+  --focus: #5c63bd;
+  --accent: #5c63bd;
+  --success-state: #23855b;
+  --error-state: #b52e32;
+  --warning-state: #94600f;
+  --pending-state: #5c63bd;
+  --shadow: 0 18px 54px rgba(30, 31, 44, 0.12);
+  --radius: 9px;
+  --hero-control-size: 27px;
+  /* The palette stays solid; these derived surfaces add a subtle top-left glow. */
+  --landscape-sheen: linear-gradient(135deg, rgb(255 255 255 / 0.04), rgb(255 255 255 / 0) 72%);
+  --landscape-primary-surface: var(--landscape-sheen), var(--landscape-primary);
+  --landscape-secondary-surface: var(--landscape-sheen), var(--landscape-secondary);
+  --landscape-inverted-surface: var(--landscape-sheen), var(--landscape-inverted);
+  --landscape-filled-surface: var(--landscape-sheen), var(--landscape-filled);
+  --landscape-primary-hover-surface: var(--landscape-sheen), color-mix(in srgb, var(--hover) 10%, var(--landscape-primary));
+  --landscape-secondary-hover-surface: var(--landscape-sheen), color-mix(in srgb, var(--hover) 10%, var(--landscape-secondary));
+  color-scheme: light;
+}
+
+html[data-theme="selene"][data-theme-mode="dark"] {
+  --background: #111112;
+  --landscape-primary: #1c1c1e;
+  --landscape-secondary: #19191b;
+  --landscape-inverted: #dedee3;
+  --landscape-delimited: #353538;
+  --landscape-filled: #222224;
+  --inactive-primary: #d8d9df;
+  --inactive-secondary: #93949e;
+  --inactive-inverted: #ffffff;
+  --inactive-delimited: #353538;
+  --inactive-filled: #29292c;
+  --active-primary: #e2e2e5;
+  --active-secondary: #aeb0ba;
+  --active-inverted: #171722;
+  --active-delimited: #8c91ef;
+  --active-filled: #29292d;
+  --hover: #8c91ef;
+  --focus: #8c91ef;
+  --accent: #8c91ef;
+  --success-state: #5db88a;
+  --error-state: #b52e32;
+  --warning-state: #dea45a;
+  --pending-state: #8c91ef;
+  --shadow: 0 18px 48px rgba(0, 0, 0, 0.3);
+  --landscape-sheen: linear-gradient(135deg, rgb(255 255 255 / 0.055), rgb(255 255 255 / 0) 72%);
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  html[data-theme="selene"][data-theme-mode="system"] {
+    --background: #111112;
+    --landscape-primary: #1c1c1e;
+    --landscape-secondary: #19191b;
+    --landscape-inverted: #dedee3;
+    --landscape-delimited: #353538;
+    --landscape-filled: #222224;
+    --inactive-primary: #d8d9df;
+    --inactive-secondary: #93949e;
+    --inactive-inverted: #ffffff;
+    --inactive-delimited: #353538;
+    --inactive-filled: #29292c;
+    --active-primary: #e2e2e5;
+    --active-secondary: #aeb0ba;
+    --active-inverted: #171722;
+    --active-delimited: #8c91ef;
+    --active-filled: #29292d;
+    --hover: #8c91ef;
+    --focus: #8c91ef;
+    --accent: #8c91ef;
+    --success-state: #5db88a;
+    --error-state: #b52e32;
+    --warning-state: #dea45a;
+    --pending-state: #8c91ef;
+    --shadow: 0 18px 48px rgba(0, 0, 0, 0.3);
+    --landscape-sheen: linear-gradient(135deg, rgb(255 255 255 / 0.055), rgb(255 255 255 / 0) 72%);
+    color-scheme: dark;
+  }
+}
+
+html[data-theme="selene"] body { font-size: 0.9rem; }
+html[data-theme="selene"] a:hover { color: var(--accent); }
+/* Selene skins every layout; plugins choose document geometry. */
+html[data-theme="selene"] .app-shell {
+  background: var(--landscape-primary-surface, var(--landscape-primary));
+  border: 1px solid var(--landscape-delimited);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+}
+html[data-theme="selene"] .active-content-tools { gap: 9px; }
+html[data-theme="selene"] .search-box,
+html[data-theme="selene"] .add-button {
+  height: var(--hero-control-size);
+  min-height: var(--hero-control-size);
+}
+html[data-theme="selene"] .add-button {
+  flex-basis: var(--hero-control-size);
+  width: var(--hero-control-size);
+}
+html[data-theme="selene"] .search-box {
+  padding: 0 8.25px;
+  color: var(--inactive-secondary);
+  border: 1px solid var(--inactive-delimited);
+  border-radius: calc(var(--hero-control-size) / 2);
+}
+html[data-theme="selene"] .search-box input { color: var(--inactive-primary); }
+html[data-theme="selene"] .search-box input::placeholder { color: var(--inactive-secondary); }
+html[data-theme="selene"] .add-button {
+  color: var(--inactive-secondary);
+  border: 1px solid var(--inactive-delimited);
+  border-radius: 50%;
+}
+html[data-theme="selene"] .add-button:hover,
+html[data-theme="selene"] .floating-menu-button:hover {
+  color: var(--accent);
+  background: var(--landscape-primary-hover-surface, color-mix(in srgb, var(--hover) 10%, var(--landscape-primary)));
+  border-color: var(--accent);
+}
+html[data-theme="selene"] .statistics-label,
+html[data-theme="selene"] .wizard-upload-title {
+  color: var(--inactive-secondary);
+}
+html[data-theme="selene"] .wizard-step label {
+  color: var(--inactive-secondary);
+  font-weight: 600;
+  letter-spacing: 0;
+  text-align: left;
+  text-transform: none;
+}
+html[data-theme="selene"] .wizard-step input,
+html[data-theme="selene"] .wizard-step select,
+html[data-theme="selene"] .wizard-step textarea {
+  height: var(--hero-control-size);
+  min-height: var(--hero-control-size);
+  color: var(--inactive-primary);
+  border: 1px solid var(--landscape-delimited);
+  border-radius: calc(var(--hero-control-size) / 2);
+}
+html[data-theme="selene"] .wizard-step select { background: var(--inactive-filled); }
+html[data-theme="selene"] .wizard-step textarea { height: auto; min-height: 56px; }
+html[data-theme="selene"] .wizard-step small { color: var(--inactive-secondary); }
+html[data-theme="selene"] .wizard-upload-zone,
+html[data-theme="selene"] .wizard-upload-preview {
+  color: var(--inactive-primary);
+  border-color: var(--landscape-delimited);
+  border-radius: calc(var(--hero-control-size) / 2);
+}
+html[data-theme="selene"] .wizard-upload-zone:hover,
+html[data-theme="selene"] .wizard-upload-zone:focus-visible,
+html[data-theme="selene"] .wizard-upload-zone.is-dragover {
+  background: var(--landscape-primary-hover-surface, color-mix(in srgb, var(--hover) 10%, var(--landscape-primary)));
+  border-color: var(--accent);
+}
+html[data-theme="selene"] .wizard-upload-copy,
+html[data-theme="selene"] .wizard-upload-formats,
+html[data-theme="selene"] .wizard-upload-remove { color: var(--inactive-secondary); }
+
+html[data-theme="selene"] #wizardLabel { border-radius: calc(var(--hero-control-size) / 2); }
+
+html[data-theme="selene"] .context-menu h2,
+html[data-theme="selene"] .active-content-section-title {
+  margin: 0 0 13px;
+  color: var(--inactive-secondary);
+  border: 0;
+  font-size: 0.77rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-align: left;
+  text-transform: none;
+}
+html[data-theme="selene"] .tag-pill {
+  padding: 2px 7px;
+  color: var(--inactive-secondary);
+  border-radius: calc(var(--hero-control-size) / 2);
+  font-size: 0.7rem;
+  text-align: left;
+}
+html[data-theme="selene"] .tag-pill:hover {
+  color: var(--inactive-primary);
+  background: var(--landscape-primary-hover-surface, color-mix(in srgb, var(--hover) 10%, var(--landscape-primary)));
+}
+html[data-theme="selene"] .tag-pill.is-active {
+  color: var(--active-primary);
+  box-shadow: inset 2px 0 0 var(--active-delimited);
+}
+html[data-theme="selene"] .tag-pill::before,
+html[data-theme="selene"] .item-tag.has-rate::before { opacity: 0.15; }
+html[data-theme="selene"] .item-tag {
+  padding: 2px 7px;
+  color: var(--inactive-secondary);
+  border-color: var(--inactive-delimited);
+  border-radius: calc(var(--hero-control-size) / 2);
+  font-size: 0.7rem;
+}
+html[data-theme="selene"] .active-content-section-items { gap: 9px; }
+html[data-theme="selene"] .item-card,
+html[data-theme="selene"] .statistics-panel,
+html[data-theme="selene"] .wizard {
+  background: var(--landscape-filled-surface, var(--landscape-filled));
+}
+html[data-theme="selene"] .item-card {
+  padding: 15px 17px;
+  border: 1px solid var(--landscape-delimited);
+  border-radius: calc(var(--hero-control-size) / 2);
+  box-shadow: none;
+}
+html[data-theme="selene"] .item-card h3 {
+  font-size: 0.96rem;
+  font-weight: 650;
+}
+html[data-theme="selene"] .item-card h3 a:hover { color: var(--accent); }
+html[data-theme="selene"] .profile-quote,
+html[data-theme="selene"] .experience-subtitle,
+html[data-theme="selene"] .field dd { color: var(--inactive-secondary); }
+html[data-theme="selene"] .profile-quote { font-style: normal; }
+html[data-theme="selene"] .field dt { font-weight: 600; }
+html[data-theme="selene"] .item-tags { margin-top: 10px; }
+html[data-theme="selene"] .remove-button { border-radius: 50%; }
+html[data-theme="selene"] .active-content-menu-item {
+  padding-block: 2px;
+  border-radius: calc(var(--hero-control-size) / 2);
+  font-weight: 550;
+}
+html[data-theme="selene"] .statistics-panel,
+html[data-theme="selene"] .wizard,
+html[data-theme="selene"] .empty-state,
+html[data-theme="selene"] .fatal-error {
+  border-color: var(--landscape-delimited);
+  border-radius: calc(var(--hero-control-size) / 2);
+  box-shadow: none;
+}
+html[data-theme="selene"] footer { font-size: 0.72rem; }
+
+/* Settings share the same restrained controls as the document surface. */
+html[data-theme="selene"] .floating-menu-button {
+  color: var(--inactive-secondary);
+  background: var(--landscape-primary);
+  border: 1px solid var(--inactive-delimited);
+  border-radius: 50%;
+  box-shadow: none;
+}
+html[data-theme="selene"] .settings-button-icon { width: 12px; height: 12px; }
+html[data-theme="selene"] .theme-select,
+html[data-theme="selene"] .secondary-button {
+  color: var(--inactive-primary);
+  border-color: var(--inactive-delimited);
+  border-radius: calc(var(--hero-control-size) / 2);
+}
+html[data-theme="selene"] .theme-select { height: var(--hero-control-size); min-height: var(--hero-control-size); }
+html[data-theme="selene"] .theme-settings-row .secondary-button { min-height: var(--hero-control-size); }
+html[data-theme="selene"] .secondary-button { padding: 5px 7px; }
+html[data-theme="selene"] .secondary-button:hover {
+  color: var(--inactive-primary);
+  background: var(--landscape-primary-hover-surface, color-mix(in srgb, var(--hover) 10%, var(--landscape-primary)));
+  border-color: var(--accent);
+}
+html[data-theme="selene"] .setting-option.is-active {
+  color: var(--active-primary);
+  border-color: var(--active-delimited);
+  box-shadow: none;
+}
+/* Match the Add button's resting surface across Selene controls. */
+html[data-theme="selene"] .add-button,
+html[data-theme="selene"] .tag-pill,
+html[data-theme="selene"] .tag-pill.is-active,
+html[data-theme="selene"] .item-tag,
+html[data-theme="selene"] .search-box,
+html[data-theme="selene"] #wizardType,
+html[data-theme="selene"] .wizard-step input,
+html[data-theme="selene"] .wizard-step textarea,
+html[data-theme="selene"] .wizard-upload-zone,
+html[data-theme="selene"] .wizard-upload-preview,
+html[data-theme="selene"] .statistics-bar,
+html[data-theme="selene"] .theme-select,
+html[data-theme="selene"] .secondary-button,
+html[data-theme="selene"] .setting-option.is-active {
+  background: var(--landscape-primary);
+}
+html[data-theme="selene"] .toast { color: var(--active-inverted); background: var(--accent); }
+html[data-theme="selene"] .toast.is-error { color: var(--inactive-inverted); background: var(--error-state); }
+
+@media print {
+  html[data-theme="selene"][data-theme-mode] {
+    --background: #ffffff;
+    --landscape-primary: #ffffff;
+    --landscape-secondary: #ffffff;
+    --landscape-inverted: #ffffff;
+    --landscape-delimited: #bbbbbb;
+    --landscape-filled: #ffffff;
+    --inactive-primary: #000000;
+    --inactive-secondary: #333333;
+    --inactive-inverted: #ffffff;
+    --inactive-delimited: #aaaaaa;
+    --inactive-filled: #ffffff;
+    --active-primary: #000000;
+    --active-secondary: #333333;
+    --active-inverted: #ffffff;
+    --active-delimited: #000000;
+    --active-filled: #ffffff;
+    --hover: #000000;
+    --focus: #000000;
+    --accent: #000000;
+    --success-state: #000000;
+    --error-state: #000000;
+    --warning-state: #000000;
+    --pending-state: #000000;
+    --shadow: none;
+    --landscape-primary-surface: var(--landscape-primary);
+    --landscape-secondary-surface: var(--landscape-secondary);
+    --landscape-inverted-surface: var(--landscape-inverted);
+    --landscape-filled-surface: var(--landscape-filled);
+    --landscape-primary-hover-surface: color-mix(in srgb, var(--hover) 10%, var(--landscape-primary));
+    --landscape-secondary-hover-surface: color-mix(in srgb, var(--hover) 10%, var(--landscape-secondary));
+    color-scheme: light;
+  }
+  html[data-theme="selene"] .app-shell {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+}

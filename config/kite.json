@@ -12,13 +12,24 @@
       "module": "./js/extensions/themes/core/plugin.js"
     },
     {
-      "id": "org.kite.layout.core",
+      "id": "org.kite.theme.selene",
+      "kind": "theme",
+      "module": "./js/extensions/themes/selene/plugin.js"
+    },
+    {
+      "id": "org.kite.layout.classic",
       "kind": "layout",
-      "module": "./js/extensions/layouts/core/plugin.js"
+      "module": "./js/extensions/layouts/classic/plugin.js"
+    },
+    {
+      "id": "org.kite.layout.workspace",
+      "kind": "layout",
+      "module": "./js/extensions/layouts/workspace/plugin.js"
     }
   ],
   "defaults": {
-    "theme": "system",
-    "layout": "two-column"
+    "theme": "core",
+    "themeMode": "system",
+    "layout": "classic"
   }
 }
