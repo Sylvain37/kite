@@ -64,9 +64,32 @@ export function createWizardController({
 
   function bookmarksWizardMarkup() {
     return [
+      wizardStepMarkup(t("bookmarkUrlPrompt"), '<input id="wizardUrl" name="url" type="url" inputmode="url" autocomplete="url" required placeholder="https://…"><input id="wizardBookmarkIllustration" name="illustration" type="hidden">'),
       wizardStepMarkup(t("bookmarkLabelPrompt"), '<input id="wizardLabel" name="label" type="text" autocomplete="off" required placeholder="Ex. MDN Web Docs">'),
-      wizardStepMarkup(t("bookmarkUrlPrompt"), '<input id="wizardUrl" name="url" type="url" inputmode="url" autocomplete="url" required placeholder="https://…">'),
       wizardStepMarkup(t("bookmarkTagsPrompt"), '<input id="wizardTags" name="tags" type="text" autocomplete="off" placeholder="web, docs, pwa">', t("addWithEnter"))
+    ].join("");
+  }
+
+  function directoryWizardMarkup() {
+    return [
+      wizardStepMarkup(t("directoryEntryType"), `<select id="directoryType" name="type" required>
+        <option value="contact">${escapeHtml(t("directoryContact"))}</option>
+        <option value="team">${escapeHtml(t("directoryTeamMember"))}</option>
+        <option value="orgchart">${escapeHtml(t("directoryOrgBranch"))}</option>
+      </select>`),
+      wizardStepMarkup(t("directoryMainInformation"), '<input id="directoryName" name="name" type="text" autocomplete="off" required placeholder="Ada Lovelace">'),
+      wizardStepMarkup(t("directoryDetails"), `<div class="wizard-field-group">
+        <input name="role" type="text" autocomplete="off" placeholder="${escapeHtml(t("directoryRole"))}">
+        <input name="email" type="email" autocomplete="email" placeholder="${escapeHtml(t("email"))}">
+        <input name="phone" type="tel" autocomplete="tel" placeholder="${escapeHtml(t("phone"))}">
+        <input name="organization" type="text" autocomplete="organization" placeholder="${escapeHtml(t("directoryOrganization"))}">
+        <input name="contacts" type="text" autocomplete="off" placeholder="${escapeHtml(t("directoryContacts"))}">
+        <input name="sourceType" type="text" autocomplete="off" placeholder="${escapeHtml(t("directorySourceType"))}">
+        <input name="sourceId" type="text" autocomplete="off" placeholder="${escapeHtml(t("directorySourceId"))}">
+        <input name="parent" type="text" autocomplete="off" placeholder="${escapeHtml(t("directoryParent"))}">
+        <input name="link" type="url" inputmode="url" autocomplete="url" placeholder="https://…">
+        <input name="tags" type="text" autocomplete="off" placeholder="${escapeHtml(t("bookmarkTagsPrompt"))}">
+      </div>`, t("addWithEnter"))
     ].join("");
   }
 
@@ -111,7 +134,7 @@ export function createWizardController({
           <div class="wizard-upload-field">
             <input id="wizardIllustrationInput" type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" hidden>
             <input id="wizardIllustrationData" name="illustration" type="hidden">
-            <button id="wizardIllustrationDropzone" class="wizard-upload-zone" type="button">
+            <button id="wizardIllustrationDropzone" class="wizard-upload-zone" type="button" aria-label="${escapeHtml(t("illustrationDropHint"))}">
               <span class="wizard-upload-title">${escapeHtml(t("experienceIllustration"))}</span>
               <span class="wizard-upload-copy">${escapeHtml(t("illustrationDropHint"))}</span>
               <span class="wizard-upload-formats">${escapeHtml(t("imageFormats"))}</span>
@@ -124,6 +147,119 @@ export function createWizardController({
           </div>
         </div>`, t("addWithEnter"))
     ].join("");
+  }
+
+  let bookmarkResolution = null;
+  let bookmarkFaviconResolution = null;
+  const MAX_FAVICON_BYTES = 128 * 1024;
+  const MAX_FAVICON_DIMENSION = 512;
+  const FAVICON_RENDER_SIZE = 64;
+
+  function pageTitleFromHtml(html) {
+    const title = new DOMParser().parseFromString(html, "text/html").querySelector("title")?.textContent ?? "";
+    return title.replace(/\s+/g, " ").trim();
+  }
+
+  function faviconCandidates(html, pageUrl) {
+    const documentObject = new DOMParser().parseFromString(html, "text/html");
+    const links = [...documentObject.querySelectorAll('link[rel]')]
+      .filter((link) => link.rel.toLowerCase().split(/\s+/).includes("icon"))
+      .map((link) => link.getAttribute("href"))
+      .filter(Boolean);
+    links.push(new URL("/favicon.ico", pageUrl).href);
+    return [...new Set(links.map((href) => new URL(href, pageUrl).href))];
+  }
+
+  async function faviconBlobToDataUrl(blob) {
+    if (!blob.size || blob.size > MAX_FAVICON_BYTES) return "";
+    const objectUrl = URL.createObjectURL(blob);
+    const image = new Image();
+    try {
+      image.decoding = "async";
+      image.src = objectUrl;
+      await image.decode();
+      if (!image.naturalWidth || !image.naturalHeight || image.naturalWidth > MAX_FAVICON_DIMENSION || image.naturalHeight > MAX_FAVICON_DIMENSION) return "";
+      const scale = Math.min(1, FAVICON_RENDER_SIZE / Math.max(image.naturalWidth, image.naturalHeight));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+      canvas.getContext("2d")?.drawImage(image, 0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL("image/png");
+    } catch {
+      return "";
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+    }
+  }
+
+  async function resolveBookmarkFavicon(html, pageUrl, controller) {
+    for (const faviconUrl of faviconCandidates(html, pageUrl)) {
+      try {
+        const response = await fetch(faviconUrl, { signal: controller.signal });
+        if (!response.ok) continue;
+        const dataUrl = await faviconBlobToDataUrl(await response.blob());
+        if (dataUrl) return dataUrl;
+      } catch {
+        if (controller.signal.aborted) return "";
+      }
+    }
+    return "";
+  }
+
+  async function resolveBookmarkTitle(url, controller) {
+    const resolution = fetch(url, { redirect: "follow", signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) return null;
+        const html = await response.text();
+        return { title: pageTitleFromHtml(html), html, pageUrl: response.url || url };
+      })
+      // A failed cross-origin request remains on the URL step until the five-second deadline.
+      .catch(() => new Promise(() => {}));
+    const deadline = new Promise((resolve) => setTimeout(() => resolve(null), 5000));
+    return Promise.race([resolution, deadline]);
+  }
+
+  function startBookmarkFaviconResolution(resolution) {
+    const controller = new AbortController();
+    const token = {};
+    const promise = (async () => {
+      const timeout = setTimeout(() => controller.abort(), 3000);
+      try {
+        const illustration = await resolveBookmarkFavicon(resolution.html, resolution.pageUrl, controller);
+        if (bookmarkFaviconResolution?.token !== token || !illustration) return;
+        const input = elements.wizardForm.elements.namedItem("illustration");
+        if (input) input.value = illustration;
+      } finally {
+        clearTimeout(timeout);
+        if (bookmarkFaviconResolution?.token === token) bookmarkFaviconResolution = null;
+      }
+    })();
+    bookmarkFaviconResolution = { token, controller, promise };
+  }
+
+  async function resolveBookmarkUrlStep() {
+    if (bookmarkResolution || !validateWizardStep()) return;
+    const url = String(elements.wizardForm.elements.namedItem("url")?.value ?? "").trim();
+    const controller = new AbortController();
+    const token = {};
+    bookmarkResolution = { token, controller };
+    elements.wizardForm.setAttribute("aria-busy", "true");
+    const resolution = await resolveBookmarkTitle(url, controller);
+    if (bookmarkResolution?.token !== token || elements.wizard.hidden) return;
+    bookmarkResolution = null;
+    elements.wizardForm.removeAttribute("aria-busy");
+    const label = elements.wizardForm.elements.namedItem("label");
+    if (label && !label.value) label.value = resolution?.title ?? "";
+    if (resolution) startBookmarkFaviconResolution(resolution);
+    setWizardStep(1);
+  }
+
+  function cancelBookmarkResolution() {
+    bookmarkResolution?.controller.abort();
+    bookmarkFaviconResolution?.controller.abort();
+    bookmarkResolution = null;
+    bookmarkFaviconResolution = null;
+    elements.wizardForm.removeAttribute("aria-busy");
   }
 
   const CV_EXPERIENCE_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -201,7 +337,9 @@ export function createWizardController({
 
   function configureWizard() {
     const sectionId = String(state.activeSection ?? "");
-    elements.wizardTrack.innerHTML = sectionId === "cv" ? cvWizardMarkup() : bookmarksWizardMarkup();
+    elements.wizardTrack.innerHTML = sectionId === "cv" ? cvWizardMarkup()
+      : sectionId === "directory" ? directoryWizardMarkup()
+        : bookmarksWizardMarkup();
     if (sectionId === "cv") syncCvWizardType();
   }
 
@@ -245,6 +383,7 @@ export function createWizardController({
   }
 
   function closeWizard() {
+    cancelBookmarkResolution();
     elements.wizard.classList.remove("is-open");
     elements.wizard.hidden = true;
     elements.addButton.classList.remove("is-cancel", "is-previous");
@@ -278,13 +417,21 @@ export function createWizardController({
     return Object.fromEntries(new FormData(elements.wizardForm).entries());
   }
 
-  function submitWizardStep() {
+  async function submitWizardStep() {
     if (!validateWizardStep()) return;
     const count = Math.max(1, elements.wizardTrack.children.length);
     if (state.wizardStep < count - 1) {
+      if (String(state.activeSection) === "bookmarks" && state.wizardStep === 0) {
+        void resolveBookmarkUrlStep();
+        return;
+      }
       if (String(state.activeSection) === "cv" && state.wizardStep === 0) syncCvWizardType();
       setWizardStep(state.wizardStep + 1);
       return;
+    }
+
+    if (String(state.activeSection) === "bookmarks" && bookmarkFaviconResolution) {
+      await bookmarkFaviconResolution.promise;
     }
 
     const adapter = activeContentAdapter();
@@ -308,6 +455,7 @@ export function createWizardController({
     elements.wizardForm.addEventListener("submit", (event) => event.preventDefault());
     elements.wizardForm.addEventListener("input", (event) => {
       if (event.target?.setCustomValidity) event.target.setCustomValidity("");
+      if (event.target?.id === "wizardUrl") cancelBookmarkResolution();
     });
     elements.wizardForm.addEventListener("change", (event) => {
       if (event.target?.name === "type" && String(state.activeSection) === "cv") syncCvWizardType();

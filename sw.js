@@ -4,7 +4,7 @@
  * The service worker uses a stale-while-revalidate strategy for same-origin GET
  * requests. Bump CACHE_VERSION whenever a release changes shell resources.
  */
-const CACHE_VERSION = "v0.5.77";
+const CACHE_VERSION = "v0.5.104";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -39,6 +39,8 @@ const APP_SHELL = [
   "./js/extensions/layouts/workspace/style.css",
   "./js/plugins/bookmarks/plugin.js",
   "./js/plugins/cv/plugin.js",
+  "./js/plugins/directory/plugin.js",
+  "./data/directory.yml",
   "./images/favicon.svg",
   "./images/favicon.ico",
   "./images/favicon-16x16.png",

@@ -84,8 +84,8 @@ The main layers are:
 
 ```text
 index.html                    Static, English canonical UI shell
-css/app.css                   Styles needed for the initial view
-css/settings.css, wizard.css  Styles loaded when each feature first opens
+css/                          Screen structure and responsive layout only
+js/extensions/themes/core/, selene/  Complete visual styles for each theme
 config/kite.json              Foundation modules and defaults
 data/default.yml              Bundled fictional demonstration document, canonical English data
 js/main.js                    Startup, application controller and document rendering
@@ -229,7 +229,7 @@ Use URL parameters to open a specific presentation, for example:
 
 Changing language retranslates the current active content cards, counters, search context, layout labels and an open add-item wizard while preserving its in-progress values. Theme, color mode and layout preferences are applied through `data-theme`, `data-theme-mode` and `data-layout` attributes on `<html>`.
 
-Core and Selene are theme plugins in `js/extensions/themes/core/` and `js/extensions/themes/selene/`. Core adapts [Min Light and Min Dark by Miguel Solorio](https://github.com/miguelsolorio/min-theme) to Kite’s color roles; Selene retains its own palette. Each plugin registers a `style.css` URL that loads when selected. The two layout plugins live in `js/extensions/layouts/classic/` and `js/extensions/layouts/workspace/`; each registers one choice and loads its `style.css` when selected. `css/app.css` contains initial shared component rules. Add a `theme` or `layout` foundation entry to `config/kite.json` to install another plugin; Settings builds the theme and layout choices from their registries. All bundled plugin stylesheets are precached for offline use.
+Core and Selene are theme plugins in `js/extensions/themes/core/` and `js/extensions/themes/selene/`. Core adapts [Min Light and Min Dark by Miguel Solorio](https://github.com/miguelsolorio/min-theme) to Kite’s color roles; Selene retains its own palette. Each plugin registers a `style.css` URL that loads when selected. The two layout plugins live in `js/extensions/layouts/classic/` and `js/extensions/layouts/workspace/`; each registers one choice and loads its `style.css` when selected. `css/` contains only screen structure and responsive rules; each theme keeps its complete visual component rules in its own stylesheet. Add a `theme` or `layout` foundation entry to `config/kite.json` to install another plugin; Settings builds the theme and layout choices from their registries. All bundled plugin stylesheets are precached for offline use.
 
 Both themes use the same CSS color roles, defined separately for light and dark modes in `js/extensions/themes/core/style.css` and `js/extensions/themes/selene/style.css`. System mode follows the matching system color scheme. `background` is the page canvas; `landscape-primary`, `landscape-secondary`, `landscape-inverted`, `landscape-delimited` and `landscape-filled` describe structural surfaces and their borders. `inactive-primary`, `inactive-secondary`, `inactive-inverted`, `inactive-delimited` and `inactive-filled` describe ordinary text and controls. Their `active-*` counterparts describe selected text, borders and fills. `hover`, `focus` and `accent` cover interaction and brand colors. `success-state`, `error-state`, `warning-state` and `pending-state` are status colors; `shadow` is the elevation shadow. Components consume these roles instead of declaring colors directly. Selene adds a subtle top-left lightening gradient to landscape-backed surfaces; print uses flat monochrome colors.
 

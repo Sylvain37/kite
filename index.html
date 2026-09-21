@@ -74,64 +74,75 @@
           <div id="tagsList" class="tags-list"></div>
         </aside>
         <section id="activeContent" class="active-content" aria-label="Active content" data-i18n-aria-label="activeContent">
-          <aside id="settingsPanel" class="settings-panel item-card no-print" hidden aria-label="Kite settings" data-i18n-aria-label="settingsPanel">
-    <div class="settings-track">
-      <section class="settings-section" aria-labelledby="languageSettingLabel">
-        <span id="languageSettingLabel" class="setting-label" data-i18n="interfaceLanguage">Language</span>
-        <!-- Language choices are generated from js/i18n.js so locale metadata has a single source of truth. -->
-        <div id="languageOptions" class="settings-actions" role="group" aria-labelledby="languageSettingLabel"></div>
-      </section>
-      <section class="settings-section" aria-labelledby="themeSettingLabel">
-        <label id="themeSettingLabel" class="setting-label" for="themeSelect" data-i18n="theme">Theme</label>
-        <div class="theme-settings-row">
-          <select id="themeSelect" class="theme-select" aria-labelledby="themeSettingLabel"></select>
-          <div class="settings-actions" role="group" aria-labelledby="themeSettingLabel">
-          <button class="secondary-button setting-option" type="button" data-theme-mode-value="system" aria-pressed="false" aria-label="System" data-i18n-aria-label="themeSystem"><svg class="setting-option-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06-2.83 2.83-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V21h-4v-.08A1.7 1.7 0 0 0 8.96 19.36a1.7 1.7 0 0 0-1.87.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1.04H3v-4h.04A1.7 1.7 0 0 0 4.6 8.92a1.7 1.7 0 0 0-.34-1.87L4.2 6.99l2.83-2.83.06.06a1.7 1.7 0 0 0 1.87.34A1.7 1.7 0 0 0 10 3V3h4v.08a1.7 1.7 0 0 0 1.04 1.48 1.7 1.7 0 0 0 1.87-.34l.06-.06 2.83 2.83-.06.06a1.7 1.7 0 0 0-.34 1.87A1.7 1.7 0 0 0 20.96 10H21v4h-.04A1.7 1.7 0 0 0 19.4 15Z"/></svg></button>
-          <button class="secondary-button setting-option" type="button" data-theme-mode-value="light" aria-pressed="false" aria-label="Light" data-i18n-aria-label="themeLight"><svg class="setting-option-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"/></svg></button>
-          <button class="secondary-button setting-option" type="button" data-theme-mode-value="dark" aria-pressed="false" aria-label="Dark" data-i18n-aria-label="themeDark"><svg class="setting-option-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 14.1A8.5 8.5 0 0 1 9.9 3.5 8.5 8.5 0 1 0 20.5 14.1Z"/></svg></button>
-          </div>
-        </div>
-      </section>
-      <section class="settings-section" aria-labelledby="layoutSettingLabel">
-        <span id="layoutSettingLabel" class="setting-label" data-i18n="layout">Layout</span>
-        <div id="layoutOptions" class="settings-actions" role="group" aria-labelledby="layoutSettingLabel"></div>
-      </section>
-      <section class="settings-section" aria-labelledby="statisticsSettingLabel">
-        <span id="statisticsSettingLabel" class="setting-label" data-i18n="statistics">Statistics</span>
-        <div class="settings-actions">
-          <button id="statisticsToggle" class="secondary-button setting-option" type="button" aria-pressed="false" aria-label="Show statistics" data-i18n-aria-label="show"><svg class="setting-option-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V10M10 19V5M16 19v-7M22 19V8"/></svg></button>
-        </div>
-      </section>
-      <section class="settings-section" aria-labelledby="dataSettingLabel">
-        <span id="dataSettingLabel" class="setting-label" data-i18n="data">Data</span>
-        <div class="settings-actions">
-          <button id="importButton" class="secondary-button" type="button" aria-label="Import a YAML file" data-i18n-aria-label="importYaml">⇧ <span data-i18n="import">Import</span></button>
-          <button id="saveButton" class="secondary-button notification-button" type="button" aria-label="Save the YAML document" data-i18n-aria-label="saveYaml">⇩ <span data-i18n="save">Save</span><span id="saveNotificationBadge" class="notification-badge" aria-hidden="true" hidden></span></button>
-        </div>
-        <input id="fileInput" type="file" accept=".yml,.yaml,text/yaml,application/yaml" hidden>
-      </section>
-      <section class="settings-section" aria-labelledby="applicationInformationsLabel">
-        <span id="applicationInformationsLabel" class="setting-label" data-i18n="applicationInformations">Application Informations</span>
-        <div class="app-info">
-          <div class="app-info-row">
-            <span class="app-info-label" data-i18n="applicationName">Application name:</span>
-            <h1 id="appName" class="appName">Kite</h1>
-          </div>
-          <div class="app-info-row">
-            <span class="app-info-label" data-i18n="applicationDescription">Application description:</span>
-            <blockquote id="appDescription" class="appDescription" hidden></blockquote>
-          </div>
-          <div class="app-info-row">
-            <span class="app-info-label" data-i18n="applicationVersion">Application version:</span>
-            <span class="appVersion">v0.5.77</span>
-          </div>
-          <div class="app-info-row">
-            <span class="app-info-label" data-i18n="moreInfo">More info:</span>
-            <a class="githubLink" href="https://github.com/Sylvain37/kite" target="_blank" rel="noopener" aria-label="GitHub repository"><svg aria-hidden="true" viewBox="0 0 16 16" focusable="false"><path d="M8 0a8 8 0 0 0-2.53 15.59c.4.07.55-.17.55-.38v-1.49c-2.23.49-2.7-1.08-2.7-1.08-.36-.93-.89-1.18-.89-1.18-.73-.5.06-.49.06-.49.81.06 1.23.83 1.23.83.72 1.23 1.88.88 2.34.67.07-.52.28-.88.51-1.08-1.78-.2-3.65-.89-3.65-3.96 0-.88.31-1.59.83-2.15-.08-.2-.36-1.02.08-2.12 0 0 .68-.22 2.2.82A7.64 7.64 0 0 1 8 4.8c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.52.56.83 1.27.83 2.15 0 3.08-1.87 3.75-3.66 3.95.29.25.54.73.54 1.47v2.18c0 .21.14.46.55.38A8 8 0 0 0 8 0Z"/></svg></a>
-          </div>
-        </div>
-      </section>
-    </div>
+          <aside id="settingsPanel" class="settings-panel no-print" hidden aria-label="Kite settings" data-i18n-aria-label="settingsPanel">
+            <div class="settings-track">
+              <h2 id="generalSettingsHeading" class="card-heading settings-card-heading" data-i18n="settingsGeneral">General</h2>
+              <section class="item-card settings-card" aria-labelledby="generalSettingsHeading">
+                <div class="settings-option-row">
+                  <div class="settings-option-copy">
+                    <span class="setting-label" data-i18n="importData">Import data</span>
+                    <p class="experience-subtitle" data-i18n="importDataDescription">Imports structured data in YAML format, overwriting the current session</p>
+                  </div>
+                  <button id="importButton" class="secondary-button" type="button" aria-label="Import a YAML file" data-i18n-aria-label="importYaml">⇧ <span data-i18n="import">Import</span></button>
+                </div>
+                <div class="settings-option-row">
+                  <div class="settings-option-copy">
+                    <span class="setting-label" data-i18n="saveData">Save data</span>
+                    <p class="experience-subtitle" data-i18n="saveDataDescription">Save the current session into a YAML file</p>
+                  </div>
+                  <button id="saveButton" class="secondary-button notification-button" type="button" aria-label="Save the YAML document" data-i18n-aria-label="saveYaml">⇩ <span data-i18n="save">Save</span><span id="saveNotificationBadge" class="notification-badge" aria-hidden="true" hidden></span></button>
+                </div>
+                <div class="settings-option-row">
+                  <div class="settings-option-copy">
+                    <span class="setting-label" data-i18n="showStatistics">Show statistics</span>
+                    <p class="experience-subtitle" data-i18n="showStatisticsDescription">Shows usage statistics for the displayed items</p>
+                  </div>
+                  <button id="statisticsToggle" class="secondary-button setting-option" type="button" aria-pressed="false" aria-label="Show statistics" data-i18n-aria-label="show"><svg class="setting-option-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V10M10 19V5M16 19v-7M22 19V8"/></svg></button>
+                </div>
+                <input id="fileInput" type="file" accept=".yml,.yaml,text/yaml,application/yaml" hidden>
+              </section>
+
+              <h2 id="interfaceSettingsHeading" class="card-heading settings-card-heading" data-i18n="settingsInterface">Interface</h2>
+              <section class="item-card settings-card" aria-labelledby="interfaceSettingsHeading">
+                <div class="settings-option-row">
+                  <div class="settings-option-copy">
+                    <span id="languageSettingLabel" class="setting-label" data-i18n="currentLanguage">Current language</span>
+                    <p class="experience-subtitle" data-i18n="currentLanguageDescription">Select the display language for the session; keep in mind that data added during the session is not automatically translated in the js/i18n.js dictionary</p>
+                  </div>
+                  <div id="languageOptions" class="settings-actions" role="group" aria-labelledby="languageSettingLabel"></div>
+                </div>
+                <div class="settings-option-row">
+                  <div class="settings-option-copy">
+                    <label id="themeSettingLabel" class="setting-label" for="themeSelect" data-i18n="currentTheme">Current theme</label>
+                    <p class="experience-subtitle" data-i18n="currentThemeDescription">Choose the interface theme</p>
+                  </div>
+                  <div class="theme-settings-row">
+                    <select id="themeSelect" class="theme-select" aria-labelledby="themeSettingLabel"></select>
+                    <div class="settings-actions" role="group" aria-labelledby="themeSettingLabel">
+                      <button class="secondary-button setting-option" type="button" data-theme-mode-value="system" aria-pressed="false" aria-label="System" data-i18n-aria-label="themeSystem"><svg class="setting-option-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06-2.83 2.83-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V21h-4v-.08A1.7 1.7 0 0 0 8.96 19.36a1.7 1.7 0 0 0-1.87.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1.04H3v-4h.04A1.7 1.7 0 0 0 4.6 8.92a1.7 1.7 0 0 0-.34-1.87L4.2 6.99l2.83-2.83.06.06a1.7 1.7 0 0 0 1.87.34A1.7 1.7 0 0 0 10 3V3h4v.08a1.7 1.7 0 0 0 1.04 1.48 1.7 1.7 0 0 0 1.87-.34l.06-.06 2.83 2.83-.06.06a1.7 1.7 0 0 0-.34 1.87A1.7 1.7 0 0 0 20.96 10H21v4h-.04A1.7 1.7 0 0 0 19.4 15Z"/></svg></button>
+                      <button class="secondary-button setting-option" type="button" data-theme-mode-value="dark" aria-pressed="false" aria-label="Dark" data-i18n-aria-label="themeDark"><svg class="setting-option-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 14.1A8.5 8.5 0 0 1 9.9 3.5 8.5 8.5 0 1 0 20.5 14.1Z"/></svg></button>
+                      <button class="secondary-button setting-option" type="button" data-theme-mode-value="light" aria-pressed="false" aria-label="Light" data-i18n-aria-label="themeLight"><svg class="setting-option-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"/></svg></button>
+                    </div>
+                  </div>
+                </div>
+                <div class="settings-option-row">
+                  <div class="settings-option-copy">
+                    <span id="layoutSettingLabel" class="setting-label" data-i18n="currentLayout">Current layout</span>
+                    <p class="experience-subtitle" data-i18n="currentLayoutDescription">Choose the interface layout</p>
+                  </div>
+                  <div id="layoutOptions" class="settings-actions" role="group" aria-labelledby="layoutSettingLabel"></div>
+                </div>
+              </section>
+
+              <h2 id="informationSettingsHeading" class="card-heading settings-card-heading" data-i18n="settingsInformations">Informations</h2>
+              <section class="item-card settings-card settings-information-card" aria-labelledby="informationSettingsHeading">
+                <span class="setting-label" data-i18n="applicationSpecifications">Application specifications</span>
+                <p class="experience-subtitle"><span data-i18n="applicationName">Name:</span> <span id="appName" class="appName">Kite</span></p>
+                <p class="experience-subtitle"><span data-i18n="applicationDescription">Description:</span> <span id="appDescription" hidden></span></p>
+                <p class="experience-subtitle"><span data-i18n="applicationVersion">Version:</span> <span class="appVersion">v0.5.104</span></p>
+                <p class="experience-subtitle"><span data-i18n="moreInfo">More info:</span> <a class="githubLink" href="https://github.com/Sylvain37/kite" target="_blank" rel="noopener" aria-label="GitHub repository"><svg aria-hidden="true" viewBox="0 0 16 16" focusable="false"><path d="M8 0a8 8 0 0 0-2.53 15.59c.4.07.55-.17.55-.38v-1.49c-2.23.49-2.7-1.08-2.7-1.08-.36-.93-.89-1.18-.89-1.18-.73-.5.06-.49.06-.49.81.06 1.23.83 1.23.83.72 1.23 1.88.88 2.34.67.07-.52.28-.88.51-1.08-1.78-.2-3.65-.89-3.65-3.96 0-.88.31-1.59.83-2.15-.08-.2-.36-1.02.08-2.12 0 0 .68-.22 2.2.82A7.64 7.64 0 0 1 8 4.8c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.52.56.83 1.27.83 2.15 0 3.08-1.87 3.75-3.66 3.95.29.25.54.73.54 1.47v2.18c0 .21.14.46.55.38A8 8 0 0 0 8 0Z"/></svg></a></p>
+              </section>
+            </div>
           </aside>
           <div class="active-content-body">
           <div class="active-content-tools no-print">

@@ -1,155 +1,41 @@
-/* Settings controls are loaded when the panel opens. */
-/* Settings panel and notification controls. */
+/* Settings panel structure. Its visual style belongs to the selected theme. */
 .active-content.is-settings-open .active-content-body { display: none; }
-.settings-panel {
-  width: 100%;
-  margin-bottom: 0;
-  color: var(--inactive-primary);
-}
-.settings-track {
-  display: flex;
-  flex-direction: column;
-}
-.settings-section + .settings-section {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--landscape-delimited);
-}
-.setting-label {
-  display: block;
-  margin-bottom: 6px;
-  color: var(--inactive-secondary);
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-align: left;
-  text-transform: uppercase;
-}
-.theme-settings-row {
-  display: flex;
-  align-items: stretch;
-  gap: 6px;
-}
-.theme-settings-row .theme-select {
-  flex: 1 1 auto;
-  min-width: 0;
-  margin: 0;
-}
-.theme-settings-row .settings-actions {
-  flex: 0 0 auto;
-  flex-wrap: nowrap;
-}
-.theme-settings-row .secondary-button {
-  min-height: var(--hero-control-size);
-}
+.settings-panel { width: 100%; margin-bottom: 0; }
+.settings-track { display: flex; flex-direction: column; }
+.settings-section + .settings-section { margin-top: 12px; padding-top: 12px; }
+.setting-label { display: block; margin-bottom: 6px; }
+.theme-settings-row { display: flex; align-items: stretch; gap: 8px; }
+.theme-settings-row .theme-select { flex: 1 1 auto; min-width: 0; margin: 0; }
+.theme-settings-row .settings-actions { flex: 0 0 auto; flex-wrap: nowrap; }
 .theme-select,
 .secondary-button.setting-option,
 #importButton,
-#saveButton {
-  height: var(--hero-control-size);
-  min-height: var(--hero-control-size);
-}
-.theme-select {
-  display: block;
-  width: 100%;
-  height: var(--hero-control-size);
-  min-height: var(--hero-control-size);
-  margin-bottom: 8px;
-  padding: 4px 9px;
-  color: var(--inactive-primary);
-  background: var(--inactive-filled);
-  border: 1px solid var(--inactive-delimited);
-  border-radius: 7.5px;
-}
-.settings-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 6px;
-}
-.secondary-button {
-  padding: 3px 5px;
-  color: var(--inactive-primary);
-  background: var(--inactive-filled);
-  border: 1px solid var(--inactive-delimited);
-  border-radius: 10.5px;
-  font-size: 0.75rem;
-}
-.secondary-button:hover {
-  background: transparent;
-  border-color: var(--hover);
-  color: var(--hover);
-}
+#saveButton { height: var(--hero-control-size); min-height: var(--hero-control-size); }
+.theme-select { display: block; width: 100%; margin-bottom: 8px; padding: 4px 9px; }
+.settings-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 8px; }
+.notification-button { position: relative; overflow: visible; }
+.setting-option { display: inline-flex; align-items: center; justify-content: center; width: var(--hero-control-size); padding-inline: 0; }
+.setting-option-icon { width: 1em; height: 1em; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.language-option-flag { width: 1.25em; height: 0.84em; flex: 0 0 auto; }
+.language-option-name { white-space: nowrap; }
+.settings-section .app-info { display: grid; gap: 6px; }
+.app-info-row { display: flex; align-items: baseline; gap: 6px; }
+.githubLink { display: inline-flex; align-items: center; }
+.githubLink svg { width: 1em; height: 1em; }
 
-.notification-button {
-  position: relative;
-  overflow: visible;
-}
-.setting-option {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--hero-control-size);
-  padding-inline: 0;
-}
-.setting-option-icon {
-  width: 1em;
-  height: 1em;
-  flex: 0 0 auto;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.setting-option.is-active {
-  color: var(--active-primary);
-  border-color: var(--active-delimited);
-  box-shadow: inset 0 0 0 1px var(--active-delimited);
-}
-.language-option-flag {
-  width: 1.25em;
-  height: 0.84em;
-  flex: 0 0 auto;
-  border-radius: 1px;
-  box-shadow: 0 0 0 1px var(--inactive-delimited);
-}
-.language-option-name {
-  white-space: nowrap;
-}
-
-.settings-section .app-info {
-  display: grid;
-  gap: 6px;
-}
-.app-info-row {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-}
-.app-info-label {
-  color: var(--inactive-secondary);
-  font-size: 0.78rem;
-}
-.appName,
-.appDescription {
-  margin: 0;
-  color: var(--inactive-secondary);
-  font-size: 0.78rem;
-}
-.appDescription { font-style: italic; }
-.appVersion,
-.githubLink {
-  color: var(--inactive-secondary);
-  font-size: 0.78rem;
-}
-.githubLink {
-  display: inline-flex;
-  align-items: center;
-}
-.githubLink svg {
-  width: 1em;
-  height: 1em;
-  fill: currentColor;
+.settings-card-heading { margin: 20px 0 5px; }
+.settings-card { display: grid; gap: 0; }
+.settings-option-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 16px; padding: 14px 0; }
+.settings-option-row:first-child { padding-top: 0; }
+.settings-option-row:last-child { padding-bottom: 0; }
+.settings-option-copy { min-width: 0; }
+.settings-option-copy .experience-subtitle { margin: 4px 0 0; }
+.settings-option-row > .settings-actions { justify-content: flex-end; }
+.settings-information-card .experience-subtitle { margin: 5px 0 0; }
+@media (max-width: 560px) {
+  .settings-option-row { grid-template-columns: 1fr; gap: 10px; }
+  .settings-option-row > .settings-actions,
+  .settings-option-row > .theme-settings-row { justify-self: start; }
+  .theme-settings-row { width: 100%; flex-wrap: wrap; }
+  .theme-settings-row .theme-select { min-width: min(100%, 180px); }
 }

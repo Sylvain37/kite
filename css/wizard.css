@@ -1,174 +1,22 @@
-/* Wizard controls are loaded when the user opens Add. */
+/* Add-item editor structure. Its visual style belongs to the selected theme. */
 .active-content > .wizard.is-open { margin-bottom: var(--active-content-gap); }
-
-/* Progressive add-item wizard. */
-.wizard {
-  display: grid;
-  grid-template-rows: 0fr;
-  margin-top: 0;
-  padding: 14px 16px 16px;
-  opacity: 0;
-  overflow: hidden;
-  background: var(--landscape-primary-surface, var(--landscape-primary));
-  border: 1px solid var(--landscape-delimited);
-  border-radius: 14px;
-  transition:
-    grid-template-rows 360ms cubic-bezier(.2,.8,.2,1),
-    margin-top 360ms cubic-bezier(.2,.8,.2,1),
-    opacity 220ms ease;
-}
-.wizard.is-open {
-  grid-template-rows: 1fr;
-  margin: 0 0 20px 0;
-  opacity: 1;
-}
-.wizard form {
-  min-height: 0;
-  overflow: hidden;
-}
-.wizard-track {
-  display: flex;
-  width: 300%;
-  transition: transform 330ms cubic-bezier(.2,.8,.2,1);
-}
-.wizard-step {
-  width: 33.333333%;
-}
-.wizard-step label {
-  display: block;
-  margin-bottom: 7px;
-  color: var(--inactive-secondary);
-  font-size: 0.82rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  text-align: center;
-}
+.wizard { display: grid; grid-template-rows: 0fr; margin-top: 0; padding: 14px 16px 16px; opacity: 0; overflow: hidden; }
+.wizard.is-open { grid-template-rows: 1fr; margin: 0 0 20px; opacity: 1; }
+.wizard form { min-height: 0; overflow: hidden; }
+.wizard-track { display: flex; width: 300%; }
+.wizard-step { width: 33.333333%; }
+.wizard-step label { display: block; margin-bottom: 7px; text-align: center; }
 .wizard-step input,
 .wizard-step select,
-.wizard-step textarea {
-  width: 100%;
-  height: 28px;
-  padding: 0 16px;
-  color: var(--inactive-primary);
-  background: var(--landscape-secondary-surface, var(--landscape-secondary));
-  border: 2px solid transparent;
-  border-radius: 12px;
-}
-#wizardLabel {
-  width: 100%;
-  border-radius: var(--radius);
-  font: inherit;
-}
-.wizard-step small { display: block; margin: 2px 0px 0px 18px; color: var(--inactive-secondary); }
-.wizard-field-group {
-  display: grid;
-  gap: 7px;
-}
-.wizard-inline-fields {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 7px;
-}
-.wizard-step select {
-  appearance: auto;
-}
-.wizard-step textarea {
-  min-height: 56px;
-  padding-top: 7px;
-  padding-bottom: 7px;
-  font: inherit;
-  resize: vertical;
-}
-#wizardType,
-.wizard-step input,
-.wizard-step select,
-.wizard-step textarea,
-.wizard-upload-zone,
-#wizardIllustrationPreview {
-  border-radius: calc(var(--hero-control-size) / 2);
-}
-
-/* Embedded image picker used by CV experiences. */
-.wizard-upload-field {
-  display: grid;
-  gap: 7px;
-}
-.wizard-upload-zone {
-  display: grid;
-  gap: 2px;
-  width: 100%;
-  min-height: 76px;
-  padding: 10px 16px;
-  color: var(--inactive-primary);
-  background: var(--landscape-secondary-surface, var(--landscape-secondary));
-  border: 2px dashed var(--inactive-delimited);
-  border-radius: 12px;
-  font: inherit;
-  text-align: center;
-  cursor: pointer;
-  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
-}
-.wizard-upload-zone:hover,
-.wizard-upload-zone:focus-visible,
-.wizard-upload-zone.is-dragover {
-  border-color: var(--hover);
-  background: var(--landscape-secondary-hover-surface, color-mix(in srgb, var(--hover) 10%, var(--landscape-secondary)));
-}
-.wizard-upload-zone.is-dragover {
-  transform: scale(.995);
-}
-.wizard-upload-title {
-  font-weight: 800;
-}
-.wizard-upload-copy,
-.wizard-upload-formats {
-  color: var(--inactive-secondary);
-  font-size: .78rem;
-}
-.wizard-upload-formats {
-  font-size: .7rem;
-}
-.wizard-upload-preview {
-  position: relative;
-  display: grid;
-  grid-template-columns: 44px minmax(0, 1fr) 28px;
-  align-items: center;
-  gap: 9px;
-  min-height: 50px;
-  padding: 3px 4px;
-  color: var(--inactive-primary);
-  background: var(--landscape-secondary-surface, var(--landscape-secondary));
-  border-radius: 12px;
-}
-.wizard-upload-preview img {
-  width: 44px;
-  height: 44px;
-  object-fit: cover;
-  border-radius: 9px;
-}
-#wizardIllustrationName {
-  min-width: 0;
-  overflow: hidden;
-  font-size: .78rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.wizard-upload-remove {
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  color: var(--inactive-secondary);
-  background: transparent;
-  border: 0;
-  border-radius: 50%;
-  font-size: 1.2rem;
-  line-height: 1;
-  cursor: pointer;
-}
-.wizard-upload-remove:hover,
-.wizard-upload-remove:focus-visible {
-  color: var(--hover);
-  outline: 2px solid var(--focus);
-  outline-offset: 1px;
-}
+.wizard-step textarea { width: 100%; height: 28px; padding: 0 16px; }
+#wizardLabel { width: 100%; }
+.wizard-step small { display: block; margin: 2px 0 0 18px; }
+.wizard-field-group,
+.wizard-upload-field { display: grid; gap: 7px; }
+.wizard-inline-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.wizard-step textarea { min-height: 56px; padding-top: 7px; padding-bottom: 7px; resize: vertical; }
+.wizard-upload-zone { display: grid; gap: 2px; width: 100%; min-height: 76px; padding: 10px 16px; text-align: center; }
+.wizard-upload-preview { position: relative; display: grid; grid-template-columns: 44px minmax(0, 1fr) 28px; align-items: center; gap: 9px; min-height: 50px; padding: 3px 4px; }
+.wizard-upload-preview img { width: 44px; height: 44px; object-fit: cover; }
+#wizardIllustrationName { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wizard-upload-remove { width: 28px; height: 28px; padding: 0; }

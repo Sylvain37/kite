@@ -73,6 +73,27 @@ const elements = {
   toast: document.querySelector("#toast")
 };
 
+/** Keep native hover tooltips aligned with every button’s accessible action. */
+function syncButtonTooltips(root = document) {
+  const buttons = root.matches?.("button") ? [root] : [...root.querySelectorAll("button")];
+  buttons.forEach((button) => {
+    const label = button.getAttribute("aria-label")?.trim() || button.textContent.replace(/\s+/g, " ").trim();
+    if (label) button.title = label;
+  });
+}
+
+function observeButtonTooltips() {
+  syncButtonTooltips();
+  new MutationObserver((records) => {
+    records.forEach((record) => {
+      if (record.type === "attributes") syncButtonTooltips(record.target);
+      else record.addedNodes.forEach((node) => {
+        if (node.nodeType === Node.ELEMENT_NODE) syncButtonTooltips(node);
+      });
+    });
+  }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["aria-label"] });
+}
+
 let wizardController = null;
 let wizardLoading = null;
 
@@ -178,6 +199,7 @@ function applyLocale(locale, { persist = true, rerender = true } = {}) {
   if (persist) setStoredPreference("kite.locale", value);
 
   localizeStaticDom();
+  syncButtonTooltips();
   syncLanguageOptions();
   if (runtime.layouts.size) renderLayoutOptions();
   elements.statisticsToggle.innerHTML = settingsOptionIcon("statistics");
@@ -380,6 +402,7 @@ function setOptionalText(element, value) {
   const text = String(value ?? "").trim();
   element.textContent = text;
   element.hidden = !text;
+  if (element.id === "appDescription") element.parentElement.hidden = !text;
 }
 
 // ---- Search, filtering and contextual tags ----------------------------------------
@@ -853,7 +876,30 @@ function renderExperienceCard(item, section) {
   </article>`;
 }
 
+function renderOrgChartCard(item) {
+  const nodes = Array.isArray(item.orgchart) ? item.orgchart : [];
+  const byParent = new Map();
+  const identifiers = new Set(nodes.map((node) => String(node.id)));
+  for (const node of nodes) {
+    const parent = String(node.parent ?? "");
+    const key = parent && identifiers.has(parent) ? parent : "";
+    byParent.set(key, [...(byParent.get(key) ?? []), node]);
+  }
+  const visited = new Set();
+  const renderNode = (node) => {
+    const id = String(node.id);
+    if (visited.has(id)) return "";
+    visited.add(id);
+    const children = (byParent.get(id) ?? []).map(renderNode).join("");
+    return `<li class="org-chart-node"><div class="org-chart-node-card"><strong>${escapeHtml(translateTerm(node.label))}</strong><span>${escapeHtml(translateTerm(node.sourceType))} · ${escapeHtml(translateTerm(node.sourceLabel))}</span></div>${children ? `<ul>${children}</ul>` : ""}</li>`;
+  };
+  const roots = byParent.get("") ?? nodes;
+  const markup = roots.map(renderNode).join("") || `<li class="org-chart-node"><span>${escapeHtml(t("noItems"))}</span></li>`;
+  return `<article class="item-card org-chart-card"><div class="card-heading"><div class="card-heading-main"><h3>${escapeHtml(translateTerm(item.label))}</h3></div></div><div class="org-chart" role="tree"><ul>${markup}</ul></div></article>`;
+}
+
 function renderItem(item, section) {
+  if (item.cardType === "orgchart") return renderOrgChartCard(item);
   if (item.cardType === "experience") return renderExperienceCard(item, section);
   if (item.cardType === "profile") return renderProfileCard(item, section);
 
@@ -1258,6 +1304,7 @@ function bindEvents() {
 }
 
 async function start() {
+  observeButtonTooltips();
   renderLanguageOptions();
   const urlLocale = getUrlPreference("lang", (value) =>
     supportedLocales().some((locale) => locale.code === value));

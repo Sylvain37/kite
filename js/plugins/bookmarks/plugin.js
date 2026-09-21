@@ -54,7 +54,7 @@ const adapter = {
           .map((id) => ({ id: String(id), label: tagMap.get(String(id)) ?? String(id) }));
         const fields = Object.entries(bookmark)
           .filter(([key]) => !["id", "label", "link", "tags"].includes(key))
-          .map(([key, value]) => ({ key, label: key, value }));
+          .map(([key, value]) => ({ key, label: key, value, type: key === "illustration" ? "image" : "text" }));
 
         return {
           id: String(bookmark.id),
@@ -90,6 +90,9 @@ const adapter = {
       id: nextNumericId(documentObject.data.bookmarks),
       label: String(values.label ?? "").trim(),
       link: String(values.url ?? "").trim(),
+      illustration: /^data:image\/(?:png|jpe?g|webp|gif);base64,/i.test(String(values.illustration ?? ""))
+        ? String(values.illustration)
+        : "",
       tags: tagIds
     };
     documentObject.data.bookmarks.push(bookmark);

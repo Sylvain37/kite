@@ -10,7 +10,7 @@ This document is a self-contained prompt intended for a capable coding agent. It
 - Reasoning effort used for this maintenance pass: **High**
 - Agent role: **front-end/PWA code-maintenance agent with local repository editing and validation tools**
 - Reference date: **2026-09-17**
-- Target Kite release: **v0.5.77**
+- Target Kite release: **v0.5.104**
 - Execution context used for maintenance: a Linux sandbox with filesystem/shell access, Python and Node.js available for validation; the application itself must not depend on those tools at runtime.
 - Reproducibility boundary: hidden chain-of-thought, private system prompts and platform-internal instructions are not application dependencies and must not be required. The generated repository must be justified by explicit source files, comments and executable/browser-visible behaviour.
 
@@ -387,7 +387,7 @@ On start:
 State includes config, active adapter/model/view, active content sections, active section, source filename, selected tag, search query, statistics visibility, wizard step and unsaved-change badge counts.
 
 Required UI behaviour:
-- Settings places the document title in bold, the translated quote in italics, `· v0.5.77 ·`, and the GitHub link below a separator after the data management controls.
+- Settings places the document title in bold, the translated quote in italics, `· v0.5.104 ·`, and the GitHub link below a separator after the data management controls.
 - Search is diacritic-insensitive and matches both canonical and localised exact terms.
 - Render the active content sections as a keyboard-operable tab menu in `contextMenu` above `tagsTitle`, including when the active section has no tags. Use a horizontal row in narrow `classic` and a vertical menu otherwise.
 - Each menu row keeps its item count aligned to the right; arrow keys/Home/End move among sections.
@@ -484,7 +484,7 @@ Save:
 - context menu with a Settings button beside the section menu on wide screens and narrow Core screens; on narrow Selene screens Settings moves into the search/Add row above active content;
 - content shell with context menu and active content;
 - empty active content state;
-- document title, quote, release `v0.5.77` and GitHub link in `app-info`, placed in its own Settings section after the data controls;
+- document title, quote, release `v0.5.104` and GitHub link in `app-info`, placed in its own Settings section after the data controls;
 - toast region;
 - an early inline bootstrap that sets theme, color, layout and language before the first paint, loads only the selected theme/layout stylesheets, and positions the narrow Selene Settings button;
 - one module script `./js/main.js`.
@@ -499,7 +499,7 @@ Language/color-mode/layout option buttons use data-locale-value / data-theme-mod
 
 # 18. CSS and visual design
 
-Create `css/app.css` for initial shared component rules, plus `css/settings.css` and `css/wizard.css` for optional features. Core and Selene load their own theme stylesheets when selected. The `classic` and `workspace` layout plugins each load a separate stylesheet when selected for document geometry. Do not place layout rules in `css/app.css` or tie them to a theme selector.
+Keep `css/app.css`, `css/settings.css` and `css/wizard.css` limited to screen structure, spacing, sizing and mobile rules. Put colors, typography, borders, radii, shadows, focus and transition styles directly in both Core and Selene stylesheets. Core and Selene load their own theme stylesheets when selected. The `classic` and `workspace` layout plugins each load a separate stylesheet when selected for document geometry. Do not place layout rules in `css/app.css` or tie them to a theme selector.
 
 Design character:
 - theme-specific surfaces for the document and controls;
@@ -682,14 +682,14 @@ Create a simple Kite favicon/logo in SVG and corresponding raster/icon files. As
 
 # 21. Initial loading and optional styles
 
-Keep `css/app.css` limited to the initial document view. Place Settings and add-item editor rules in `css/settings.css` and `css/wizard.css`; load each on first use. The add-item editor logic lives in `js/app/wizard.js` and is imported on first use. Theme and layout plugins register stylesheet URLs without loading all styles at activation. An early script in `index.html` applies the URL or saved theme/layout before first paint and loads only the selected pair. Keep the initial menu and controls stable while the document loads; an empty mobile tags list must take no space. Test the Selene URL with classic layout and statistics at desktop and narrow widths for layout shifts.
+Keep the three `css/` files limited to screen structure and responsive layout. Place their visual rules in the shared theme stylesheet, while `css/settings.css` and `css/wizard.css` continue to load on first use. The add-item editor logic lives in `js/app/wizard.js` and is imported on first use. Theme and layout plugins register stylesheet URLs without loading all styles at activation. An early script in `index.html` applies the URL or saved theme/layout before first paint and loads only the selected pair. Keep the initial menu and controls stable while the document loads; an empty mobile tags list must take no space. Test the Selene URL with classic layout and statistics at desktop and narrow widths for layout shifts.
 
 GitHub Pages controls the HTTP `Cache-Control` header for JS/CSS (currently `max-age=600` on the reference deployment). The Service Worker cache cannot alter that first-visit response header. Long browser TTLs require a host or CDN with configurable headers and fingerprinted asset URLs; keep HTML and `sw.js` short lived.
 
 # 22. Service worker
 
 `sw.js`:
-- `CACHE_VERSION = "v0.5.77"`;
+- `CACHE_VERSION = "v0.5.104"`;
 - precache the complete shell including optional feature styles, theme/layout styles, the wizard module and shared modules;
 - installation: cache shell and skipWaiting;
 - activation: delete older caches and claim clients;
