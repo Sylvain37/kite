@@ -877,25 +877,64 @@ function renderExperienceCard(item, section) {
 }
 
 function renderOrgChartCard(item) {
-  const nodes = Array.isArray(item.orgchart) ? item.orgchart : [];
-  const byParent = new Map();
-  const identifiers = new Set(nodes.map((node) => String(node.id)));
+  const source = Array.isArray(item.orgchart) ? item.orgchart : [];
+  const nodes = source.map((node) => ({ ...node, id: String(node.id), parent: String(node.parent ?? "") }));
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  const children = new Map(nodes.map((node) => [node.id, []]));
+  const roots = [];
   for (const node of nodes) {
-    const parent = String(node.parent ?? "");
-    const key = parent && identifiers.has(parent) ? parent : "";
-    byParent.set(key, [...(byParent.get(key) ?? []), node]);
+    if (node.parent && node.parent !== node.id && byId.has(node.parent)) children.get(node.parent).push(node);
+    else roots.push(node);
   }
-  const visited = new Set();
-  const renderNode = (node) => {
-    const id = String(node.id);
-    if (visited.has(id)) return "";
-    visited.add(id);
-    const children = (byParent.get(id) ?? []).map(renderNode).join("");
-    return `<li class="org-chart-node"><div class="org-chart-node-card"><strong>${escapeHtml(translateTerm(node.label))}</strong><span>${escapeHtml(translateTerm(node.sourceType))} · ${escapeHtml(translateTerm(node.sourceLabel))}</span></div>${children ? `<ul>${children}</ul>` : ""}</li>`;
+  if (!roots.length && nodes.length) roots.push(nodes[0]);
+
+  const positions = new Map();
+  let leaf = 0;
+  let maxDepth = 0;
+  const place = (node, depth, ancestors = new Set()) => {
+    if (positions.has(node.id) || ancestors.has(node.id)) return positions.get(node.id);
+    const branch = new Set(ancestors).add(node.id);
+    const childPositions = children.get(node.id).map((child) => place(child, depth + 1, branch)).filter(Boolean);
+    const column = childPositions.length
+      ? childPositions.reduce((sum, child) => sum + child.column, 0) / childPositions.length
+      : leaf++;
+    const position = { column, depth };
+    positions.set(node.id, position);
+    maxDepth = Math.max(maxDepth, depth);
+    return position;
   };
-  const roots = byParent.get("") ?? nodes;
-  const markup = roots.map(renderNode).join("") || `<li class="org-chart-node"><span>${escapeHtml(t("noItems"))}</span></li>`;
-  return `<article class="item-card org-chart-card"><div class="card-heading"><div class="card-heading-main"><h3>${escapeHtml(translateTerm(item.label))}</h3></div></div><div class="org-chart" role="tree"><ul>${markup}</ul></div></article>`;
+  for (const root of roots) place(root, 0);
+  for (const node of nodes) if (!positions.has(node.id)) place(node, 0);
+
+  const nodeWidth = 154;
+  const nodeHeight = 64;
+  const columnGap = 34;
+  const rowGap = 56;
+  const padding = 24;
+  const columns = Math.max(1, leaf);
+  const width = columns * nodeWidth + Math.max(0, columns - 1) * columnGap + padding * 2;
+  const height = (maxDepth + 1) * nodeHeight + maxDepth * rowGap + padding * 2;
+  const coordinate = (node) => {
+    const position = positions.get(node.id);
+    return {
+      x: padding + position.column * (nodeWidth + columnGap) + nodeWidth / 2,
+      y: padding + position.depth * (nodeHeight + rowGap)
+    };
+  };
+  const links = nodes.flatMap((node) => {
+    const parent = byId.get(node.parent);
+    if (!parent || !positions.has(node.id) || !positions.has(parent.id)) return [];
+    const from = coordinate(parent);
+    const to = coordinate(node);
+    const middle = from.y + nodeHeight + rowGap / 2;
+    return [`<path d="M ${from.x} ${from.y + nodeHeight} V ${middle} H ${to.x} V ${to.y}"/>`];
+  }).join("");
+  const cards = nodes.map((node) => {
+    const point = coordinate(node);
+    return `<div class="org-chart-node" role="treeitem" style="left:${point.x}px;top:${point.y}px"><div class="org-chart-node-card"><strong>${escapeHtml(translateTerm(node.label))}</strong><span>${escapeHtml(translateTerm(node.sourceType))} · ${escapeHtml(translateTerm(node.sourceLabel))}</span></div></div>`;
+  }).join("");
+  const empty = nodes.length ? "" : `<span>${escapeHtml(t("noActiveContent"))}</span>`;
+  return `<article class="item-card org-chart-card"><div class="card-heading"><div class="card-heading-main"><h3>${escapeHtml(translateTerm(item.label))}</h3></div></div><div class="org-chart" role="tree">${empty || `<div class="org-chart-canvas" style="width:${width}px;height:${height}px"><svg class="org-chart-links" viewBox="0 0 ${width} ${height}" aria-hidden="true">${links}</svg>${cards}</div>`}</div></article>`;
 }
 
 function renderItem(item, section) {
@@ -1039,7 +1078,7 @@ function renderActiveContent() {
       <span class="active-content-menu-count" aria-label="${escapeHtml(countLabel)}">${count}</span>
     </button>`);
 
-    const activeContentCount = sectionId === "bookmarks" || sectionId === "cv"
+    const activeContentCount = ["bookmarks", "cv", "directory"].includes(sectionId)
       ? ""
       : `<p class="active-content-count">${countLabel}</p>`;
 

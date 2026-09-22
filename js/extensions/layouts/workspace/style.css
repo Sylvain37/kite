@@ -4,16 +4,23 @@ html:root[data-layout="workspace"] .app-shell {
   margin: 52px auto 28px;
   overflow: hidden;
   background: var(--landscape-primary-surface, var(--landscape-primary));
-  border: 1px solid var(--landscape-delimited);
+  border: 0;
   border-radius: 14px;
-  box-shadow: var(--shadow);
+  box-shadow: none;
 }
 html:root[data-layout="workspace"] .app-shell main {
   display: grid;
   grid-template-columns: minmax(180px, 230px) minmax(0, 1fr);
-  min-height: 50vh;
+  background: var(--background);
+  border: 0;
 }
 html:root[data-layout="workspace"] .content-shell { display: contents; }
+html:root[data-layout="workspace"] .active-content-menu { border-bottom: 0; }
+/* Match the inset that positions remove buttons inside item cards. */
+html:root[data-layout="workspace"] .active-content-tools {
+  width: auto;
+  margin-inline-end: var(--workspace-card-control-inset, 10px);
+}
 html:root[data-layout="workspace"] .context-menu {
   grid-column: 1;
   grid-row: 1;
@@ -21,15 +28,18 @@ html:root[data-layout="workspace"] .context-menu {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  padding: 25px 13px;
-  background: var(--landscape-secondary-surface, var(--landscape-secondary));
-  border-right: 1px solid var(--landscape-delimited);
+  padding: 16px;
+  background: transparent;
+  border: 0;
 }
 html:root[data-layout="workspace"] .active-content {
   grid-column: 2;
   grid-row: 1;
   min-width: 0;
-  padding: 25px 30px 34px;
+  padding: 16px;
+  background: var(--landscape-primary-surface, var(--landscape-primary));
+  border: 1px solid var(--landscape-delimited);
+  border-radius: 14px;
 }
 html:root[data-layout="workspace"] .context-menu h2,
 html:root[data-layout="workspace"] .active-content-section-title { text-align: left; }
@@ -53,15 +63,25 @@ html:root[data-layout="workspace"] footer {
   html:root[data-layout="workspace"] .app-shell main { display: block; min-height: 0; }
   html:root[data-layout="workspace"] .content-shell { display: block; }
   html:root[data-layout="workspace"] .context-menu {
-    padding: 16px;
-    border-right: 0;
-    border-bottom: 1px solid var(--landscape-delimited);
+    padding: 16px 16px 0 16px;
+    margin-bottom: 0;
+    border: 0;
   }
+  html:root[data-layout="workspace"] .context-menu .tags-list { padding-bottom: 0; }
   html:root[data-layout="workspace"] .active-content-menu {
     flex-direction: row;
     width: 100%;
     gap: 8px;
+    margin-bottom: 0;
     overflow-x: auto;
+  }
+  html:root[data-layout="workspace"] #settingsButton {
+    border-bottom-right-radius: 0;
+    border-bottom-left-radius: 0;
+  }
+  html:root[data-theme="selene"][data-layout="workspace"] #settingsButton {
+    border-bottom-right-radius: 50%;
+    border-bottom-left-radius: 50%;
   }
   html:root[data-layout="workspace"] .active-content-menu-item { flex: 0 0 auto; width: auto; }
   html:root[data-layout="workspace"] .active-content-menu-count { margin-left: 0; }

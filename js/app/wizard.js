@@ -75,7 +75,7 @@ export function createWizardController({
       wizardStepMarkup(t("directoryEntryType"), `<select id="directoryType" name="type" required>
         <option value="contact">${escapeHtml(t("directoryContact"))}</option>
         <option value="team">${escapeHtml(t("directoryTeamMember"))}</option>
-        <option value="orgchart">${escapeHtml(t("directoryOrgBranch"))}</option>
+
       </select>`),
       wizardStepMarkup(t("directoryMainInformation"), '<input id="directoryName" name="name" type="text" autocomplete="off" required placeholder="Ada Lovelace">'),
       wizardStepMarkup(t("directoryDetails"), `<div class="wizard-field-group">
@@ -83,9 +83,7 @@ export function createWizardController({
         <input name="email" type="email" autocomplete="email" placeholder="${escapeHtml(t("email"))}">
         <input name="phone" type="tel" autocomplete="tel" placeholder="${escapeHtml(t("phone"))}">
         <input name="organization" type="text" autocomplete="organization" placeholder="${escapeHtml(t("directoryOrganization"))}">
-        <input name="contacts" type="text" autocomplete="off" placeholder="${escapeHtml(t("directoryContacts"))}">
-        <input name="sourceType" type="text" autocomplete="off" placeholder="${escapeHtml(t("directorySourceType"))}">
-        <input name="sourceId" type="text" autocomplete="off" placeholder="${escapeHtml(t("directorySourceId"))}">
+        <input name="member" type="text" autocomplete="off" placeholder="${escapeHtml(t("directoryMemberTeams"))}">
         <input name="parent" type="text" autocomplete="off" placeholder="${escapeHtml(t("directoryParent"))}">
         <input name="link" type="url" inputmode="url" autocomplete="url" placeholder="https://…">
         <input name="tags" type="text" autocomplete="off" placeholder="${escapeHtml(t("bookmarkTagsPrompt"))}">

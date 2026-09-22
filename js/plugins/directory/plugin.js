@@ -1,12 +1,13 @@
 import { cloneValue, nextNumericId } from "../../shared/data.js";
 
-/** Contacts are the source of people; teams and organisation-chart nodes reference them. */
+/** Directory adapter: contacts are the source of tags, team membership and hierarchy. */
 export const manifest = { id: "directory", version: "1.0.0", kind: "business" };
 
-function text(value) { return String(value ?? "").trim(); }
-function list(value) { return String(value ?? "").split(",").map(text).filter(Boolean); }
-function field(key, value, type = "text") { return value ? { key, label: key, value, type } : null; }
-function fields(...entries) { return entries.filter(Boolean); }
+const text = (value) => String(value ?? "").trim();
+const list = (value) => Array.isArray(value) ? value.flatMap(list) : String(value ?? "").split(",").map(text).filter(Boolean);
+const key = (value) => text(value).toLocaleLowerCase();
+const field = (name, value, type = "text") => value ? { key: name, label: name, value, type } : null;
+const fields = (...entries) => entries.filter(Boolean);
 
 function ensureDirectory(model) {
   model.setup ??= { plugins: [{ name: manifest.id, version: manifest.version }] };
@@ -14,65 +15,98 @@ function ensureDirectory(model) {
   model.data.directory ??= {};
   const directory = model.data.directory;
   directory.contacts = Array.isArray(directory.contacts) ? directory.contacts : [];
-  directory.teams = Array.isArray(directory.teams) ? directory.teams : (Array.isArray(directory.team) ? directory.team : []);
-  directory.orgchart = Array.isArray(directory.orgchart) ? directory.orgchart : [];
+  directory.teams = Array.isArray(directory.teams) ? directory.teams : [];
   return model;
 }
 
+function contactLabel(contact) {
+  return text(contact.name) || text(contact.label) || "Untitled";
+}
+
+function contactTags(contact) {
+  return list(contact.tags).map((label) => ({ id: `tag-${key(label)}`, label }));
+}
+
 function contactItem(contact) {
-  const label = text(contact.name) || text(contact.label) || "Untitled";
   return {
     id: `contact-${contact.id}`,
-    label,
+    label: contactLabel(contact),
     link: text(contact.link),
-    tags: [{ id: "directory-contact", label: "contact" }, ...list(contact.tags).map((tag) => ({ id: `tag-${tag.toLocaleLowerCase()}`, label: tag }))],
+    tags: contactTags(contact),
     profileTitle: text(contact.role),
     fields: fields(
-      field("email", text(contact.email), "email"), field("phone", text(contact.phone), "phone"),
-      field("organization", text(contact.organization)), field("role", text(contact.role))
+      field("email", text(contact.email), "email"),
+      field("phone", text(contact.phone), "phone"),
+      field("organization", text(contact.organization)),
+      field("role", text(contact.role))
     )
   };
 }
 
+function isMemberOf(contact, team) {
+  const references = list(contact.member).map(key);
+  return references.includes(key(team.id)) || references.includes(key(team.name)) || references.includes(key(team.label));
+}
+
+function teamMembers(team, contacts) {
+  return contacts.filter((contact) => isMemberOf(contact, team));
+}
+
 function teamItem(team, contacts) {
-  const members = (Array.isArray(team.contacts) ? team.contacts : [])
-    .map((id) => contacts.get(String(id)))
-    .filter(Boolean)
-    .map((contact) => text(contact.name) || text(contact.label));
+  const members = teamMembers(team, contacts).map(contactLabel);
   return {
     id: `team-${team.id}`,
     label: text(team.name) || text(team.label) || "Untitled team",
-    tags: [{ id: "directory-team", label: "team" }],
-    fields: fields(field("contacts", members.join(" · ")))
+    displayTags: false,
+    fields: fields(field("members", members.join(" · ")))
   };
 }
 
-function organisationChart(directory, contacts, teams) {
-  const sourceLabel = (kind, id) => {
-    const source = kind === "team" ? teams.get(String(id)) : contacts.get(String(id));
-    return text(source?.name) || text(source?.label) || "Untitled";
-  };
-  return directory.orgchart.map((node) => ({
-    id: String(node.id),
-    parent: node.parent == null ? "" : String(node.parent),
-    label: text(node.label) || sourceLabel(text(node.sourceType) === "team" ? "team" : "contact", node.sourceId),
-    sourceType: text(node.sourceType) === "team" ? "team" : "contact",
-    sourceLabel: sourceLabel(text(node.sourceType) === "team" ? "team" : "contact", node.sourceId)
+function resolveParent(reference, contacts, teams) {
+  const value = text(reference);
+  if (!value) return "";
+  const normalized = key(value);
+  const typed = normalized.match(/^(contact|team)[:/-](.+)$/);
+  if (typed) return `${typed[1]}-${typed[2]}`;
+  const contact = contacts.find((entry) => key(entry.id) === normalized || key(contactLabel(entry)) === normalized);
+  if (contact) return `contact-${contact.id}`;
+  const team = teams.find((entry) => key(entry.id) === normalized || key(entry.name ?? entry.label) === normalized);
+  return team ? `team-${team.id}` : "";
+}
+
+function organisationChart(contacts, teams) {
+  const teamNodes = teams.map((team) => ({
+    id: `team-${team.id}`,
+    parent: "",
+    label: text(team.name) || text(team.label) || "Untitled team",
+    sourceType: "team",
+    sourceLabel: text(team.name) || text(team.label) || "Untitled team"
   }));
+  const contactNodes = contacts.map((contact) => {
+    const explicitParent = resolveParent(contact.parent ?? contact.manager ?? contact.reportsTo, contacts, teams);
+    const memberTeam = teams.find((team) => isMemberOf(contact, team));
+    const membershipParent = memberTeam ? `team-${memberTeam.id}` : "";
+    return {
+      id: `contact-${contact.id}`,
+      parent: explicitParent || membershipParent,
+      label: contactLabel(contact),
+      sourceType: "contact",
+      sourceLabel: contactLabel(contact)
+    };
+  });
+  return [...teamNodes, ...contactNodes];
 }
 
 function toView(model) {
   const directory = ensureDirectory(model).data.directory;
-  const contacts = new Map(directory.contacts.map((contact) => [String(contact.id), contact]));
-  const teams = new Map(directory.teams.map((team) => [String(team.id), team]));
   const items = [
     ...directory.contacts.map(contactItem),
-    ...directory.teams.map((team) => teamItem(team, contacts))
+    ...directory.teams.map((team) => teamItem(team, directory.contacts))
   ];
-  const chart = organisationChart(directory, contacts, teams);
+  const chart = organisationChart(directory.contacts, directory.teams);
   if (chart.length) items.push({ id: "directory-orgchart", cardType: "orgchart", label: "Organisation chart", orgchart: chart, displayTags: false, fields: [] });
   const tags = new Map();
-  for (const item of items) for (const tag of item.tags ?? []) tags.set(tag.id, tag);
+  for (const contact of directory.contacts) for (const tag of contactTags(contact)) tags.set(tag.id, tag);
   return { type: "directory", title: text(directory.title) || "Directory", subtitle: text(directory.subtitle), quote: text(directory.quote), tags: [...tags.values()], items };
 }
 
@@ -92,22 +126,15 @@ const adapter = {
     if (!name) throw new Error("A name is required.");
     if (type === "contact") {
       const entry = { id: nextNumericId(directory.contacts), name };
-      for (const key of ["role", "email", "phone", "organization", "link", "tags"]) if (text(values[key])) entry[key] = text(values[key]);
+      for (const name of ["role", "email", "phone", "organization", "link", "tags", "member", "parent"]) {
+        if (text(values[name])) entry[name] = name === "member" ? list(values[name]) : text(values[name]);
+      }
       directory.contacts.push(entry);
       return entry;
     }
     if (type === "team") {
-      const entry = { id: nextNumericId(directory.teams), name, contacts: list(values.contacts) };
+      const entry = { id: nextNumericId(directory.teams), name };
       directory.teams.push(entry);
-      return entry;
-    }
-    if (type === "orgchart") {
-      const sourceType = text(values.sourceType) === "team" ? "team" : "contact";
-      const sourceId = text(values.sourceId);
-      if (!sourceId) throw new Error("An organisation-chart source is required.");
-      const entry = { id: nextNumericId(directory.orgchart), label: name, sourceType, sourceId };
-      if (text(values.parent)) entry.parent = text(values.parent);
-      directory.orgchart.push(entry);
       return entry;
     }
     throw new Error("Unsupported directory entry type.");
@@ -115,7 +142,7 @@ const adapter = {
   remove(model, id) {
     const directory = ensureDirectory(model).data.directory;
     const [kind, ...parts] = String(id).split("-");
-    const collection = { contact: directory.contacts, team: directory.teams }[kind];
+    const collection = kind === "contact" ? directory.contacts : kind === "team" ? directory.teams : null;
     if (!collection) return false;
     const index = collection.findIndex((entry) => String(entry.id) === parts.join("-"));
     return index >= 0 ? Boolean(collection.splice(index, 1)) : false;

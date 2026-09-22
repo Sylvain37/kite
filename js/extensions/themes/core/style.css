@@ -939,7 +939,7 @@ footer { padding: 20px; color: var(--inactive-secondary); text-align: center; fo
   padding: 0 16px;
   color: var(--inactive-primary);
   background: var(--landscape-secondary-surface, var(--landscape-secondary));
-  border: 2px solid transparent;
+  border: 1px solid transparent;
   border-radius: 12px;
 }
 #wizardLabel {
@@ -1247,4 +1247,41 @@ html[data-theme="core"] .theme-select:focus-visible {
   border-radius: var(--radius);
 }
 .org-chart-card .org-chart-node-card span { color: var(--inactive-secondary); }
-.org-chart-card .org-chart-node ul { border-top: 1px solid var(--landscape-delimited); }
+.org-chart-card .org-chart-links path {
+  fill: none;
+  stroke: var(--focus);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+
+/* Workspace leaves its sidebar transparent; controls retain their own contrast. */
+html:root[data-layout="workspace"] .context-menu h2 { color: var(--inactive-primary); }
+html:root[data-layout="workspace"] .context-menu .active-content-menu-item,
+html:root[data-layout="workspace"] .context-menu .tag-pill,
+html:root[data-layout="workspace"] .context-menu .floating-menu-button {
+  color: var(--inactive-primary);
+  background: var(--landscape-primary-surface, var(--landscape-primary));
+  border: 1px solid var(--landscape-delimited);
+}
+html:root[data-layout="workspace"] .context-menu .active-content-menu-item.is-active {
+  color: var(--active-inverted);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+html:root[data-layout="workspace"] .context-menu .active-content-menu-count {
+  color: inherit;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+}
+
+html:root[data-layout="workspace"] .context-menu .active-content-menu-count {
+  background: transparent;
+  border: 0;
+}
+
+html[data-theme="core"] { --workspace-card-control-inset: 10px; }
+
+/* Bookmark cards keep their tags tight to the card content in Core. */
+html[data-theme="core"] #activeContentSectionBookmarks .item-tags { margin-top: 0; }

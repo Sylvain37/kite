@@ -24,6 +24,7 @@
 .githubLink svg { width: 1em; height: 1em; }
 
 .settings-card-heading { margin: 20px 0 5px; }
+.settings-track > .settings-card-heading:first-child { margin-top: 0; }
 .settings-card { display: grid; gap: 0; }
 .settings-option-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 16px; padding: 14px 0; }
 .settings-option-row:first-child { padding-top: 0; }

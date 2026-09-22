@@ -4,6 +4,8 @@ setup:
       version: 1.0.0
     - name: cv
       version: 1.0.0
+    - name: directory
+      version: 1.0.0
 data:
   bookmarks:
     - id: 1
@@ -86,6 +88,25 @@ data:
             rate: 0.8
           - id: 12
             rate: 0.6
+  directory:
+    title: Kite directory
+    contacts:
+      - id: 1
+        name: Ada Lovelace
+        email: ada@example.test
+        role: Architect
+        tags: [math, leadership]
+        member: [engineering]
+      - id: 2
+        name: Grace Hopper
+        email: grace@example.test
+        role: Engineering lead
+        tags: [engineering]
+        member: [engineering]
+        parent: Ada Lovelace
+    teams:
+      - id: engineering
+        name: Engineering
   tags:
     - id: 0
       label: French
