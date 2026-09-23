@@ -89,7 +89,7 @@ data:
           - id: 12
             rate: 0.6
   directory:
-    title: Kite directory
+    title: Directory
     contacts:
       - id: 1
         name: Ada Lovelace

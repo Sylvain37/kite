@@ -3,6 +3,18 @@ import { cloneValue, nextNumericId } from "../../shared/data.js";
 /** Directory adapter: contacts are the source of tags, team membership and hierarchy. */
 export const manifest = { id: "directory", version: "1.0.0", kind: "business" };
 
+// These canonical labels are translated by translateTerm() in the shared renderer.
+// Imported values remain untouched unless they match a bundled canonical value.
+const DIRECTORY_TERMS = Object.freeze({
+  title: "Directory",
+  chart: "Organisation chart",
+  contact: "contact",
+  team: "team",
+  members: "members",
+  untitled: "Untitled",
+  untitledTeam: "Untitled team"
+});
+
 const text = (value) => String(value ?? "").trim();
 const list = (value) => Array.isArray(value) ? value.flatMap(list) : String(value ?? "").split(",").map(text).filter(Boolean);
 const key = (value) => text(value).toLocaleLowerCase();
@@ -20,7 +32,7 @@ function ensureDirectory(model) {
 }
 
 function contactLabel(contact) {
-  return text(contact.name) || text(contact.label) || "Untitled";
+  return text(contact.name) || text(contact.label) || DIRECTORY_TERMS.untitled;
 }
 
 function contactTags(contact) {
@@ -56,9 +68,9 @@ function teamItem(team, contacts) {
   const members = teamMembers(team, contacts).map(contactLabel);
   return {
     id: `team-${team.id}`,
-    label: text(team.name) || text(team.label) || "Untitled team",
+    label: text(team.name) || text(team.label) || DIRECTORY_TERMS.untitledTeam,
     displayTags: false,
-    fields: fields(field("members", members.join(" · ")))
+    fields: fields(field(DIRECTORY_TERMS.members, members.join(" · ")))
   };
 }
 
@@ -78,9 +90,9 @@ function organisationChart(contacts, teams) {
   const teamNodes = teams.map((team) => ({
     id: `team-${team.id}`,
     parent: "",
-    label: text(team.name) || text(team.label) || "Untitled team",
-    sourceType: "team",
-    sourceLabel: text(team.name) || text(team.label) || "Untitled team"
+    label: text(team.name) || text(team.label) || DIRECTORY_TERMS.untitledTeam,
+    sourceType: DIRECTORY_TERMS.team,
+    sourceLabel: text(team.name) || text(team.label) || DIRECTORY_TERMS.untitledTeam
   }));
   const contactNodes = contacts.map((contact) => {
     const explicitParent = resolveParent(contact.parent ?? contact.manager ?? contact.reportsTo, contacts, teams);
@@ -90,7 +102,7 @@ function organisationChart(contacts, teams) {
       id: `contact-${contact.id}`,
       parent: explicitParent || membershipParent,
       label: contactLabel(contact),
-      sourceType: "contact",
+      sourceType: DIRECTORY_TERMS.contact,
       sourceLabel: contactLabel(contact)
     };
   });
@@ -104,10 +116,10 @@ function toView(model) {
     ...directory.teams.map((team) => teamItem(team, directory.contacts))
   ];
   const chart = organisationChart(directory.contacts, directory.teams);
-  if (chart.length) items.push({ id: "directory-orgchart", cardType: "orgchart", label: "Organisation chart", orgchart: chart, displayTags: false, fields: [] });
+  if (chart.length) items.push({ id: "directory-orgchart", cardType: "orgchart", label: DIRECTORY_TERMS.chart, orgchart: chart, displayTags: false, fields: [] });
   const tags = new Map();
   for (const contact of directory.contacts) for (const tag of contactTags(contact)) tags.set(tag.id, tag);
-  return { type: "directory", title: text(directory.title) || "Directory", subtitle: text(directory.subtitle), quote: text(directory.quote), tags: [...tags.values()], items };
+  return { type: "directory", title: text(directory.title) || DIRECTORY_TERMS.title, subtitle: text(directory.subtitle), quote: text(directory.quote), tags: [...tags.values()], items };
 }
 
 const adapter = {
