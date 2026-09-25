@@ -1,4 +1,4 @@
-![GitHub release](https://img.shields.io/github/release/Sylvain37/kite.svg) ![GitHub top language](https://img.shields.io/github/languages/top/Sylvain37/kite) ![GitHub Workflow Status](https://img.shields.io/github/workflow/status/Sylvain37/kite/main.svg)
+![GitHub release](https://img.shields.io/github/release/Sylvain37/kite.svg) ![GitHub top language](https://img.shields.io/github/languages/top/Sylvain37/kite) ![GitHub Workflow Status](https://github.com/github/docs/actions/workflows/main.yml/badge.svg)
 
 # Kite
 
