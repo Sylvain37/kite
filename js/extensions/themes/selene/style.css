@@ -685,7 +685,7 @@ footer { padding: 20px; color: var(--inactive-secondary); text-align: center; fo
 }
 
 @media print {
-  .active-content-section[hidden] { display: block !important; }
+  .active-content-section[hidden] { display: none !important; }
   .active-content-section-print-title { display: block; }
 }
 /* Settings controls are loaded when the panel opens. */
@@ -1503,3 +1503,19 @@ html[data-theme="selene"] .writer-tabs { margin-left: 15px; }
 .writer-code-copy { color: var(--inactive-secondary); background: var(--landscape-primary-surface, var(--landscape-primary)); border: 1px solid var(--landscape-delimited); border-radius: var(--radius); cursor: pointer; }
 .writer-code-copy:hover, .writer-code-copy:focus-visible, .writer-code-copy.is-copied { color: var(--active-primary); border-color: var(--accent); outline: 0; }
 .writer-inline-tag { padding: 2px 7px; color: var(--inactive-secondary); background: var(--landscape-primary-surface, var(--landscape-primary)); border: 1px solid var(--inactive-delimited); border-radius: var(--radius); font-size: .7rem; line-height: 1.2; }
+
+@media print {
+  .active-content-menu { display: block !important; margin: 0 0 12px; border: 0; }
+  .active-content-menu-item { display: none !important; }
+  .active-content-menu-item.is-active { display: inline-flex !important; padding: 0; color: var(--inactive-primary); background: transparent; border: 0; font: inherit; font-weight: 700; }
+  .active-content-menu-item.is-active .active-content-menu-count { display: none !important; }
+  .active-content-section-print-title { display: none !important; }
+}
+
+@media print {
+  .writer-card { break-inside: auto !important; page-break-inside: auto !important; }
+  .writer-preview > :first-child { break-before: auto; page-break-before: auto; }
+  .writer-diagram { position: static !important; box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; max-height: 245mm; min-height: 0; overflow: hidden !important; break-inside: auto; page-break-inside: auto; }
+  .writer-diagram svg { position: static !important; display: block; width: 100% !important; max-width: 100% !important; min-width: 0 !important; height: auto !important; max-height: 245mm !important; overflow: hidden !important; transform: none !important; }
+  .writer-preview img, .writer-preview video { box-sizing: border-box; max-width: 100% !important; max-height: 245mm !important; object-fit: contain; break-inside: avoid-page; page-break-inside: avoid; }
+}

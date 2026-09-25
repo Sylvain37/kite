@@ -1,4 +1,5 @@
 import { cloneValue } from "../../shared/data.js";
+import { translateTerm } from "../../i18n.js";
 
 export const manifest = { id: "writer", version: "1.0.0", kind: "business" };
 
@@ -36,7 +37,7 @@ function ensure(model) {
   const documents = Array.isArray(writer.documents) ? writer.documents : [];
   writer.documents = documents.length
     ? documents.map(normaliseDocument)
-    : [normaliseDocument({ id: documentId(1), title: "Document 1", markdown: legacyMarkdown }, 0)];
+    : [normaliseDocument({ id: documentId(1), title: "Writer document 1", markdown: legacyMarkdown }, 0)];
   delete writer.markdown;
   return model;
 }
@@ -62,7 +63,7 @@ const adapter = {
         id: document.id,
         cardType: "writer",
         label: document.title,
-        markdown: document.markdown,
+        markdown: translateTerm(document.markdown),
         tags: tagsFromMarkdown(document.markdown),
         displayTags: false,
         fields: []

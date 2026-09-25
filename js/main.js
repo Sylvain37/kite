@@ -36,7 +36,8 @@ const state = {
   wizardStep: 0,
   settingsNotificationCount: 0,
   saveNotificationCount: 0,
-  writerDocumentId: null
+  writerDocumentId: null,
+  writerPreviewDocumentIds: new Set()
 };
 
 const elements = {
@@ -521,6 +522,46 @@ function renderTags() {
   syncTagsPlacement();
 }
 
+function writerTagPosition(markdown, label) {
+  const target = `##${String(label ?? "").replace(/`/g, "").trim()}##`.toLowerCase();
+  if (target === "####") return -1;
+  const lines = String(markdown ?? "").split("\n");
+  let offset = 0;
+  let fenceLength = 0;
+  for (const line of lines) {
+    const fence = line.match(/^(`{3,})/);
+    if (fence) {
+      if (!fenceLength) fenceLength = fence[1].length;
+      else if (fence[1].length >= fenceLength) fenceLength = 0;
+    } else if (!fenceLength) {
+      const index = line.toLowerCase().indexOf(target);
+      if (index >= 0) return offset + index;
+    }
+    offset += line.length + 1;
+  }
+  return -1;
+}
+
+function scrollWriterEditorToTag(label) {
+  if (String(state.activeSection) !== "writer" || !label) return;
+  requestAnimationFrame(() => {
+    const editor = elements.itemsList.querySelector('[data-plugin-section="writer"] [data-writer-editor]');
+    if (!editor) return;
+    const position = writerTagPosition(editor.value, label);
+    if (position < 0) return;
+    const line = editor.value.slice(0, position).split("\n").length - 1;
+    const lineHeight = Number.parseFloat(getComputedStyle(editor).lineHeight) || 22;
+    editor.setSelectionRange(position, position + String(label).length + 4);
+    editor.scrollTop = Math.max(0, line * lineHeight - editor.clientHeight * .35);
+  });
+}
+
+function activeWriterTag(label) {
+  const needle = normalizeSearchText(String(label ?? "").replace(/`/g, "").replace(/^#+|#+$/g, "").trim());
+  if (!needle) return null;
+  return activeSectionTags().find((tag) => normalizeSearchText(tag.label) === needle) ?? null;
+}
+
 function statisticsData(section = activeContentSection()) {
   if (!section) return null;
 
@@ -975,25 +1016,31 @@ function writerToolbarIcon(name) {
   const paths = {
     preview: "<path d=\"M2.5 12s3.4-5 9.5-5 9.5 5 9.5 5-3.4 5-9.5 5S2.5 12 2.5 12Z\"/><circle cx=\"12\" cy=\"12\" r=\"2.5\"/>",
     editor: "<path d=\"m4 17.5-.8 3.3 3.3-.8L18.8 7.7 16.3 5.2 4 17.5Z\"/><path d=\"m14.8 6.7 2.5 2.5\"/>",
-    markdown: disk("M"),
-    pdf: disk("P")
+    markdown: "<path d=\"M12 3v11\"/><path d=\"m8 10 4 4 4-4\"/><path d=\"M4 20h16\"/>",
+    pdf: "<path d=\"M6 9V4h12v5\"/><path d=\"M6 18H4V10h16v8h-2\"/><path d=\"M7 15h10v6H7z\"/><path d=\"M17 12h.01\"/>"
   };
   return `<svg class="writer-toolbar-icon writer-toolbar-icon-${name}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${paths[name]}</svg>`;
 }
 
+function writerDocumentIsPreviewed(id) {
+  return state.writerPreviewDocumentIds.has(String(id));
+}
+
 function writerToolbarMarkup() {
-  const previewLabel = t("writerShowPreview");
-  return `<button class="add-button writer-toolbar-button" type="button" data-writer-toggle aria-pressed="false" aria-label="${escapeHtml(previewLabel)}" title="${escapeHtml(previewLabel)}">${writerToolbarIcon("preview")}</button>`;
+  const isPreview = writerDocumentIsPreviewed(state.writerDocumentId);
+  const label = isPreview ? t("writerShowEditor") : t("writerShowPreview");
+  return `<button class="add-button writer-toolbar-button" type="button" data-writer-toggle aria-pressed="${isPreview}" aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}">${writerToolbarIcon(isPreview ? "editor" : "preview")}</button>`;
 }
 
 function writerExportMarkup() {
   const markdownLabel = t("writerExportMarkdown");
   const pdfLabel = t("writerExportPdf");
-  return `<button class="secondary-button writer-export-button" type="button" data-writer-export="md" aria-label="${escapeHtml(markdownLabel)}" title="${escapeHtml(markdownLabel)}">${writerToolbarIcon("markdown")}<span>${escapeHtml(markdownLabel)}</span></button><button class="secondary-button writer-export-button" type="button" data-writer-export="pdf" aria-label="${escapeHtml(pdfLabel)}" title="${escapeHtml(pdfLabel)}">${writerToolbarIcon("pdf")}<span>${escapeHtml(pdfLabel)}</span></button>`;
+  return `<button class="secondary-button writer-export-button" type="button" data-writer-export="md" aria-label="${escapeHtml(markdownLabel)}" title="${escapeHtml(markdownLabel)}"><span aria-hidden="true">⇩</span><span>${escapeHtml(markdownLabel)}</span></button><button class="secondary-button writer-export-button" type="button" data-writer-export="pdf" aria-label="${escapeHtml(pdfLabel)}" title="${escapeHtml(pdfLabel)}"><span aria-hidden="true">🖶</span><span>${escapeHtml(pdfLabel)}</span></button>`;
 }
 
 function renderWriterCard(item) {
-  return `<article class="item-card writer-card" data-writer-document-card="${escapeHtml(item.id)}"><textarea class="writer-editor" data-writer-editor data-writer-document-id="${escapeHtml(item.id)}" aria-label="${escapeHtml(t("writerEditor"))}">${escapeHtml(item.markdown ?? "")}</textarea><div class="writer-preview" data-writer-preview data-writer-markdown="${escapeHtml(item.markdown ?? "")}">${renderMarkdown(item.markdown ?? "")}</div></article>`;
+  const isPreview = writerDocumentIsPreviewed(item.id);
+  return `<article class="item-card writer-card${isPreview ? " is-preview" : ""}" data-writer-document-card="${escapeHtml(item.id)}"><textarea class="writer-editor" data-writer-editor data-writer-document-id="${escapeHtml(item.id)}" aria-label="${escapeHtml(t("writerEditor"))}">${escapeHtml(item.markdown ?? "")}</textarea><div class="writer-preview" data-writer-preview data-writer-markdown="${escapeHtml(item.markdown ?? "")}">${renderMarkdown(item.markdown ?? "")}</div></article>`;
 }
 
 function renderWriterTabs(items) {
@@ -1079,8 +1126,8 @@ function syncContextualTools() {
   elements.addButton.hidden = !canAdd;
   elements.writerToolbar.hidden = sectionId !== "writer";
   elements.writerToolbar.innerHTML = sectionId === "writer" ? writerToolbarMarkup() : "";
-  elements.writerExportRow.hidden = sectionId !== "writer";
-  elements.writerExportActions.innerHTML = sectionId === "writer" ? writerExportMarkup() : "";
+  elements.writerExportRow.hidden = false;
+  elements.writerExportActions.innerHTML = writerExportMarkup();
   elements.wizard.setAttribute("aria-label", sectionId ? t("addItemSection", { section: sectionName }) : t("addItem"));
 
   if (elements.wizard.hidden) {
@@ -1174,6 +1221,11 @@ function renderActiveContent() {
   const statistics = statisticsMarkup(state.sections.find((section) => String(section.id) === activeSection) ?? null);
   elements.itemsList.innerHTML = `${statistics}${sections.join("")}`;
   elements.emptyState.hidden = totalCount > 0;
+  if (String(activeSection) === "writer" && !elements.writerToolbar.hidden) elements.writerToolbar.innerHTML = writerToolbarMarkup();
+  requestAnimationFrame(() => {
+    const preview = elements.itemsList.querySelector('[data-plugin-section="writer"] .writer-card.is-preview [data-writer-preview]');
+    if (preview && String(activeSection) === "writer") enhanceWriterPreview(preview).catch(() => {});
+  });
 }
 
 function render() {
@@ -1190,8 +1242,10 @@ function render() {
 
 function toggleTag(id) {
   state.selectedTag = String(state.selectedTag) === String(id) ? null : id;
+  const selectedTag = state.selectedTag == null ? null : activeSectionTags().find((tag) => String(tag.id) === String(state.selectedTag));
   renderTags();
   renderActiveContent();
+  if (selectedTag) scrollWriterEditorToTag(selectedTag.label);
 }
 
 // ---- Unsaved-change notifications --------------------------------------------------
@@ -1266,6 +1320,7 @@ async function toggleSettings(force) {
   const open = typeof force === "boolean" ? force : elements.settingsPanel.hidden;
 
   if (open) {
+    syncContextualTools();
     try {
       await loadStylesheet("./css/settings.css", "feature:settings");
     } catch (error) {
@@ -1289,9 +1344,13 @@ async function handleWriterToolbarClick(event) {
   const exportButton = event.target.closest("[data-writer-export]");
   if (!toggle && !exportButton) return false;
   const card = elements.itemsList.querySelector("[data-plugin-section=\"writer\"] .writer-card");
-  if (!card) return true;
   if (toggle) {
-    const isPreview = card.classList.toggle("is-preview");
+    if (!card) return true;
+    const documentId = card.dataset.writerDocumentCard;
+    const isPreview = !writerDocumentIsPreviewed(documentId);
+    if (isPreview) state.writerPreviewDocumentIds.add(String(documentId));
+    else state.writerPreviewDocumentIds.delete(String(documentId));
+    card.classList.toggle("is-preview", isPreview);
     toggle.setAttribute("aria-pressed", String(isPreview));
     const label = isPreview ? t("writerShowEditor") : t("writerShowPreview");
     toggle.innerHTML = writerToolbarIcon(isPreview ? "editor" : "preview");
@@ -1307,18 +1366,20 @@ async function handleWriterToolbarClick(event) {
     }
     return true;
   }
-  const editor = card.querySelector("[data-writer-editor]");
-  const markdown = editor?.value ?? "";
   if (exportButton.dataset.writerExport === "md") {
-    downloadText(markdown, "writer.md", "text/markdown;charset=utf-8");
-  } else {
+    if (card) downloadText(card.querySelector("[data-writer-editor]")?.value ?? "", "writer.md", "text/markdown;charset=utf-8");
+    return true;
+  }
+  if (String(state.activeSection) === "writer" && card) {
     const preview = card.querySelector("[data-writer-preview]");
     if (preview) {
-      preview.dataset.writerMarkdown = markdown;
+      preview.dataset.writerMarkdown = card.querySelector("[data-writer-editor]")?.value ?? "";
       await enhanceWriterPreview(preview).catch(() => {});
     }
-    window.print();
   }
+  await toggleSettings(false);
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  window.print();
   return true;
 }
 
@@ -1394,6 +1455,8 @@ function bindEvents() {
   elements.search.addEventListener("input", () => {
     state.query = elements.search.value;
     renderActiveContent();
+    const tag = activeWriterTag(state.query);
+    if (tag) scrollWriterEditorToTag(tag.label);
   });
 
   elements.tagsList.addEventListener("click", (event) => {
