@@ -76,6 +76,14 @@ export const TRANSLATIONS = Object.freeze({
   searchSection: freezeVariants({ en: "Search in {section}", fr: "Rechercher dans {section}" }),
   searchSectionPlaceholder: freezeVariants({ en: "Search in {section}…", fr: "Rechercher dans {section}…" }),
   addItem: freezeVariants({ en: "Add an item", fr: "Ajouter un élément" }),
+  writerEditor: freezeVariants({ en: "Writer Markdown", fr: "Markdown Writer" }),
+  writerExportMarkdown: freezeVariants({ en: "Export current Writer document as Markdown", fr: "Exporter le document Writer actif au format Markdown" }),
+  writerExportPdf: freezeVariants({ en: "Print as PDF", fr: "Imprimer en PDF" }),
+  exportDocuments: freezeVariants({ en: "Export documents", fr: "Exporter des documents" }),
+  exportDocumentsDescription: freezeVariants({ en: "Export the current document to various media", fr: "Exporte le document actuel vers différents médias" }),
+  writerCopyCode: freezeVariants({ en: "Copy code", fr: "Copier le code" }),
+  writerShowPreview: freezeVariants({ en: "Show preview", fr: "Afficher le rendu" }),
+  writerShowEditor: freezeVariants({ en: "Show editor", fr: "Afficher l’éditeur" }),
   addItemSection: freezeVariants({ en: "Add an item to {section}", fr: "Ajouter un élément dans {section}" }),
   cancelAdd: freezeVariants({ en: "Cancel adding", fr: "Annuler l'ajout" }),
   previousStep: freezeVariants({ en: "Go back to the previous step", fr: "Revenir à l'étape précédente" }),
@@ -193,7 +201,7 @@ export const TRANSLATIONS = Object.freeze({
 });
 
 /**
- * Exact translations for canonical data values bundled in default.yml and for
+ * Exact translations for canonical data values bundled in template.yml and for
  * well-known metadata values that may also appear in imported documents.
  */
 export const TERM_TRANSLATIONS = Object.freeze({
@@ -277,6 +285,7 @@ export const TERM_TRANSLATIONS = Object.freeze({
   bookmarks: freezeVariants({ en: "Bookmarks", fr: "Favoris" }),
   cv: freezeVariants({ en: "CV", fr: "CV" }),
   directory: freezeVariants({ en: "Directory", fr: "Annuaire" }),
+  writer: freezeVariants({ en: "Writer", fr: "Rédacteur" }),
   organizationChart: freezeVariants({ en: "Organisation chart", fr: "Organigramme" }),
   directoryContactType: freezeVariants({ en: "contact", fr: "contact" }),
   directoryTeamType: freezeVariants({ en: "team", fr: "équipe" }),

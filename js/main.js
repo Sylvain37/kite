@@ -7,6 +7,7 @@ import { loadStylesheet } from "./platform/stylesheet.js";
 import { currentLocale, localizeStaticDom, normalizeLocale, supportedLocales, t, translateTerm } from "./i18n.js";
 import { APP_QUOTE, APP_TITLE } from "./app/constants.js";
 import { escapeHtml, sanitizeImageUrl, sanitizeUrl } from "./shared/dom.js";
+import { enhanceWriterPreview, renderMarkdown } from "./plugins/writer/renderer.js";
 
 /**
  * Application controller: coordinates the kernel, adapters and DOM rendering.
@@ -34,7 +35,8 @@ const state = {
   preferencesReady: false,
   wizardStep: 0,
   settingsNotificationCount: 0,
-  saveNotificationCount: 0
+  saveNotificationCount: 0,
+  writerDocumentId: null
 };
 
 const elements = {
@@ -64,6 +66,9 @@ const elements = {
   contextMenuNavigation: document.querySelector("#contextMenuNavigation"),
   settingsSlot: document.querySelector(".context-menu-settings"),
   activeContentTools: document.querySelector(".active-content-tools"),
+  writerToolbar: document.querySelector("#writerToolbar"),
+  writerExportActions: document.querySelector("#writerExportActions"),
+  writerExportRow: document.querySelector("#writerExportRow"),
   activeContent: document.querySelector("#activeContent"),
   activeContentMenu: document.querySelector("#activeContentMenu"),
   tagsTitle: document.querySelector("#tagsTitle"),
@@ -377,13 +382,41 @@ async function loadParsedDocument(documentObject, sourceName) {
   runtime.emit("document:loaded", { adapter: adapter.id, sourceName: state.sourceName });
 }
 
-async function loadConfiguredDocument() {
-  const url = new URL(state.config.document, document.baseURI);
+async function loadDocumentFromUrl(url) {
   const codec = codecForFilename(url.pathname);
   if (!codec) throw new Error(`No codec is available for ${url.pathname}.`);
   const text = await fetchText(url.href);
   const parsed = codec.parse(text);
-  await loadParsedDocument(parsed, url.pathname.split("/").pop() || "default.yml");
+  await loadParsedDocument(parsed, url.pathname.split("/").pop() || "template.yml");
+}
+
+async function loadConfiguredDocument() {
+  const templatePath = state.config.templateDocument ?? state.config.document;
+  if (!templatePath) throw new Error("No template document is configured.");
+
+  const userUrl = new URL(state.config.userDocument ?? "./data/data.yml", document.baseURI);
+  // A missing user document or an unsupported filename falls back to the shipped template.
+  if (codecForFilename(userUrl.pathname)) {
+    let userText = null;
+    try {
+      userText = await fetchText(userUrl.href);
+    } catch {
+      // data.yml is optional; an unavailable file falls back to the template.
+    }
+    if (userText !== null) {
+      const codec = codecForFilename(userUrl.pathname);
+      try {
+        const parsed = codec.parse(userText);
+        await loadParsedDocument(parsed, userUrl.pathname.split("/").pop() || "data.yml");
+        return;
+      } catch (error) {
+        // An unreadable format uses the shipped template, like an absent data.yml.
+        if (!(error instanceof SyntaxError)) throw error;
+      }
+    }
+  }
+
+  await loadDocumentFromUrl(new URL(templatePath, document.baseURI));
 }
 
 function refreshView() {
@@ -937,7 +970,44 @@ function renderOrgChartCard(item) {
   return `<article class="item-card org-chart-card"><div class="card-heading"><div class="card-heading-main"><h3>${escapeHtml(translateTerm(item.label))}</h3></div></div><div class="org-chart" role="tree">${empty || `<div class="org-chart-canvas" style="width:${width}px;height:${height}px"><svg class="org-chart-links" viewBox="0 0 ${width} ${height}" aria-hidden="true">${links}</svg>${cards}</div>`}</div></article>`;
 }
 
+function writerToolbarIcon(name) {
+  const disk = (letter) => `<path d="M4 3h12l4 4v14H4V3Z"/><path d="M7 3v6h7V3"/><rect x="7" y="13" width="10" height="5" rx="1"/><text x="12" y="17.1">${letter}</text>`;
+  const paths = {
+    preview: "<path d=\"M2.5 12s3.4-5 9.5-5 9.5 5 9.5 5-3.4 5-9.5 5S2.5 12 2.5 12Z\"/><circle cx=\"12\" cy=\"12\" r=\"2.5\"/>",
+    editor: "<path d=\"m4 17.5-.8 3.3 3.3-.8L18.8 7.7 16.3 5.2 4 17.5Z\"/><path d=\"m14.8 6.7 2.5 2.5\"/>",
+    markdown: disk("M"),
+    pdf: disk("P")
+  };
+  return `<svg class="writer-toolbar-icon writer-toolbar-icon-${name}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${paths[name]}</svg>`;
+}
+
+function writerToolbarMarkup() {
+  const previewLabel = t("writerShowPreview");
+  return `<button class="add-button writer-toolbar-button" type="button" data-writer-toggle aria-pressed="false" aria-label="${escapeHtml(previewLabel)}" title="${escapeHtml(previewLabel)}">${writerToolbarIcon("preview")}</button>`;
+}
+
+function writerExportMarkup() {
+  const markdownLabel = t("writerExportMarkdown");
+  const pdfLabel = t("writerExportPdf");
+  return `<button class="secondary-button writer-export-button" type="button" data-writer-export="md" aria-label="${escapeHtml(markdownLabel)}" title="${escapeHtml(markdownLabel)}">${writerToolbarIcon("markdown")}<span>${escapeHtml(markdownLabel)}</span></button><button class="secondary-button writer-export-button" type="button" data-writer-export="pdf" aria-label="${escapeHtml(pdfLabel)}" title="${escapeHtml(pdfLabel)}">${writerToolbarIcon("pdf")}<span>${escapeHtml(pdfLabel)}</span></button>`;
+}
+
+function renderWriterCard(item) {
+  return `<article class="item-card writer-card" data-writer-document-card="${escapeHtml(item.id)}"><textarea class="writer-editor" data-writer-editor data-writer-document-id="${escapeHtml(item.id)}" aria-label="${escapeHtml(t("writerEditor"))}">${escapeHtml(item.markdown ?? "")}</textarea><div class="writer-preview" data-writer-preview data-writer-markdown="${escapeHtml(item.markdown ?? "")}">${renderMarkdown(item.markdown ?? "")}</div></article>`;
+}
+
+function renderWriterTabs(items) {
+  if (!items.length) return "";
+  const activeId = items.some((item) => String(item.id) === String(state.writerDocumentId)) ? String(state.writerDocumentId) : String(items[0].id);
+  state.writerDocumentId = activeId;
+  return `<div class="writer-tabs" role="tablist" aria-label="${escapeHtml(translateTerm("writer"))}">${items.map((item) => {
+    const active = String(item.id) === activeId;
+    return `<button class="writer-tab${active ? " is-active" : ""}" type="button" role="tab" aria-selected="${active}" data-writer-document-id="${escapeHtml(item.id)}">${escapeHtml(item.label)}</button>`;
+  }).join("")}</div>`;
+}
+
 function renderItem(item, section) {
+  if (item.cardType === "writer") return renderWriterCard(item);
   if (item.cardType === "orgchart") return renderOrgChartCard(item);
   if (item.cardType === "experience") return renderExperienceCard(item, section);
   if (item.cardType === "profile") return renderProfileCard(item, section);
@@ -1007,6 +1077,10 @@ function syncContextualTools() {
   elements.search.placeholder = sectionId ? t("searchSectionPlaceholder", { section: sectionName }) : t("search");
   elements.search.setAttribute("aria-label", searchLabel);
   elements.addButton.hidden = !canAdd;
+  elements.writerToolbar.hidden = sectionId !== "writer";
+  elements.writerToolbar.innerHTML = sectionId === "writer" ? writerToolbarMarkup() : "";
+  elements.writerExportRow.hidden = sectionId !== "writer";
+  elements.writerExportActions.innerHTML = sectionId === "writer" ? writerExportMarkup() : "";
   elements.wizard.setAttribute("aria-label", sectionId ? t("addItemSection", { section: sectionName }) : t("addItem"));
 
   if (elements.wizard.hidden) {
@@ -1078,14 +1152,19 @@ function renderActiveContent() {
       <span class="active-content-menu-count" aria-label="${escapeHtml(countLabel)}">${count}</span>
     </button>`);
 
-    const activeContentCount = ["bookmarks", "cv", "directory"].includes(sectionId)
-      ? ""
-      : `<p class="active-content-count">${countLabel}</p>`;
+    const writerItems = sectionId === "writer" ? items : null;
+    const renderedItems = writerItems
+      ? (() => {
+        const activeWriterId = writerItems.some((item) => String(item.id) === String(state.writerDocumentId)) ? String(state.writerDocumentId) : String(writerItems[0]?.id ?? "");
+        state.writerDocumentId = activeWriterId || null;
+        return writerItems.filter((item) => String(item.id) === activeWriterId).map((item) => renderItem(item, section)).join("");
+      })()
+      : items.map((item) => renderItem(item, section)).join("");
 
     sections.push(`<section id="${escapeHtml(panelId)}" class="active-content-section" role="tabpanel" tabindex="0" data-plugin-section="${escapeHtml(sectionId)}" aria-labelledby="${escapeHtml(tabId)}"${isActive ? "" : " hidden"}>
       <h3 class="active-content-section-title active-content-section-print-title">${escapeHtml(translateTerm(sectionId))}</h3>
-      ${activeContentCount}
-      <div class="active-content-section-items">${items.map((item) => renderItem(item, section)).join("")}</div>
+      ${writerItems ? renderWriterTabs(writerItems) : ""}
+      <div class="active-content-section-items">${renderedItems}</div>
     </section>`);
   }
 
@@ -1177,8 +1256,7 @@ function saveDocument() {
   const codec = runtime.codecs.get("yaml");
   const serialized = state.adapter.serialize(state.model);
   const text = codec.stringify(serialized);
-  const base = state.sourceName.replace(/\.(?:ya?ml)$/i, "") || "document";
-  downloadText(text, `${base}-export.yml`);
+  downloadText(text, "data.yml");
   clearChangeNotifications();
   showToast(t("yamlSaveReady"));
 }
@@ -1206,8 +1284,48 @@ async function toggleSettings(force) {
 
 // ---- DOM events and application bootstrap -----------------------------------------
 
+async function handleWriterToolbarClick(event) {
+  const toggle = event.target.closest("[data-writer-toggle]");
+  const exportButton = event.target.closest("[data-writer-export]");
+  if (!toggle && !exportButton) return false;
+  const card = elements.itemsList.querySelector("[data-plugin-section=\"writer\"] .writer-card");
+  if (!card) return true;
+  if (toggle) {
+    const isPreview = card.classList.toggle("is-preview");
+    toggle.setAttribute("aria-pressed", String(isPreview));
+    const label = isPreview ? t("writerShowEditor") : t("writerShowPreview");
+    toggle.innerHTML = writerToolbarIcon(isPreview ? "editor" : "preview");
+    toggle.setAttribute("aria-label", label);
+    toggle.title = label;
+    if (isPreview) {
+      const editor = card.querySelector("[data-writer-editor]");
+      const preview = card.querySelector("[data-writer-preview]");
+      if (preview) {
+        preview.dataset.writerMarkdown = editor?.value ?? "";
+        enhanceWriterPreview(preview).catch(() => {});
+      }
+    }
+    return true;
+  }
+  const editor = card.querySelector("[data-writer-editor]");
+  const markdown = editor?.value ?? "";
+  if (exportButton.dataset.writerExport === "md") {
+    downloadText(markdown, "writer.md", "text/markdown;charset=utf-8");
+  } else {
+    const preview = card.querySelector("[data-writer-preview]");
+    if (preview) {
+      preview.dataset.writerMarkdown = markdown;
+      await enhanceWriterPreview(preview).catch(() => {});
+    }
+    window.print();
+  }
+  return true;
+}
+
 function bindEvents() {
   elements.settingsButton.addEventListener("click", () => toggleSettings());
+  elements.activeContentTools.addEventListener("click", async (event) => { await handleWriterToolbarClick(event); });
+  elements.settingsPanel.addEventListener("click", async (event) => { await handleWriterToolbarClick(event); });
   elements.contextMenu.addEventListener("click", (event) => {
     if (!elements.settingsPanel.hidden && !event.target.closest("#settingsButton")) toggleSettings(false);
   });
@@ -1288,7 +1406,34 @@ function bindEvents() {
     if (tab) selectActiveContentSection(tab.dataset.activeContentSection);
   });
 
-  elements.itemsList.addEventListener("click", (event) => {
+  elements.itemsList.addEventListener("input", (event) => {
+    const editor = event.target.closest("[data-writer-editor]");
+    if (!editor) return;
+    const adapter = runtime.documents.get("writer");
+    adapter?.update?.(state.model, editor.dataset.writerDocumentId, editor.value);
+    const writerView = adapter?.toView?.(state.model);
+    const writerSection = state.sections.find((section) => section.id === "writer");
+    if (writerView && writerSection) {
+      writerSection.view = writerView;
+      if (state.adapter?.id === "writer") state.view = writerView;
+      renderTags();
+    }
+    const preview = editor.closest(".writer-card")?.querySelector("[data-writer-preview]");
+    if (preview) preview.dataset.writerMarkdown = editor.value;
+    incrementChangeNotifications();
+  });
+  elements.itemsList.addEventListener("click", async (event) => {
+    if (await handleWriterToolbarClick(event)) return;
+    const writerTab = event.target.closest(".writer-tab[data-writer-document-id]");
+    if (writerTab) {
+      state.writerDocumentId = writerTab.dataset.writerDocumentId;
+      renderActiveContent();
+      syncContextualTools();
+      requestAnimationFrame(() => {
+        elements.itemsList.querySelector(`[data-plugin-section="writer"] [data-writer-editor]`)?.focus();
+      });
+      return;
+    }
     const button = event.target.closest("[data-remove-id]");
     if (!button) return;
     const adapter = runtime.documents.get(button.dataset.removePlugin);
@@ -1321,6 +1466,15 @@ function bindEvents() {
   });
 
   elements.addButton.addEventListener("click", async () => {
+    const adapter = activeContentAdapter();
+    if (String(state.activeSection) === "writer" && typeof adapter?.add === "function") {
+      const document = adapter.add(state.model);
+      state.writerDocumentId = String(document.id);
+      incrementChangeNotifications();
+      refreshView();
+      runtime.emit("document:changed", { operation: "add", plugin: adapter.id });
+      return;
+    }
     if (wizardLoading && !wizardController) return;
     const section = state.activeSection;
     try {

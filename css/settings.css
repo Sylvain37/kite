@@ -10,7 +10,8 @@
 .theme-select,
 .secondary-button.setting-option,
 #importButton,
-#saveButton { height: var(--hero-control-size); min-height: var(--hero-control-size); }
+#saveButton,
+.writer-export-button { height: var(--hero-control-size); min-height: var(--hero-control-size); }
 .theme-select { display: block; width: 100%; margin-bottom: 8px; padding: 4px 9px; }
 .settings-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 8px; }
 .notification-button { position: relative; overflow: visible; }
@@ -31,7 +32,8 @@
 .settings-option-row:last-child { padding-bottom: 0; }
 .settings-option-copy { min-width: 0; }
 .settings-option-copy .experience-subtitle { margin: 4px 0 0; }
-.settings-option-row > .settings-actions { justify-content: flex-end; }
+.settings-option-row > .settings-actions,
+.settings-option-row > .writer-export-actions { justify-content: flex-end; }
 .settings-information-card .experience-subtitle { margin: 5px 0 0; }
 @media (max-width: 560px) {
   .settings-option-row { grid-template-columns: 1fr; gap: 10px; }

@@ -1,5 +1,6 @@
 {
-  "document": "./data/default.yml",
+  "userDocument": "./data/data.yml",
+  "templateDocument": "./data/template.yml",
   "foundation": [
     {
       "id": "org.kite.codec.yaml",

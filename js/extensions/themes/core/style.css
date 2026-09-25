@@ -167,12 +167,6 @@ a:hover { color: var(--hover); }
   border-color: var(--active-delimited);
   box-shadow: inset 0 0 0 1px var(--active-delimited);
 }
-.active-content-count {
-  margin: 0;
-  color: var(--inactive-secondary);
-  font-size: 0.75rem;
-  text-align: right;
-}
 .items-list { display: grid; }
 .item-card {
   padding: 10px;
@@ -1285,3 +1279,46 @@ html[data-theme="core"] { --workspace-card-control-inset: 10px; }
 
 /* Bookmark cards keep their tags tight to the card content in Core. */
 html[data-theme="core"] #activeContentSectionBookmarks .item-tags { margin-top: 0; }
+
+.writer-callout-note { color: var(--active-primary); background: color-mix(in srgb, var(--focus) 12%, transparent); border-color: var(--focus); }
+.writer-callout-tip { color: var(--active-primary); background: color-mix(in srgb, #37d99e 12%, transparent); border-color: #37d99e; }
+.writer-callout-important { color: var(--active-primary); background: color-mix(in srgb, var(--active-delimited) 12%, transparent); border-color: var(--active-delimited); }
+.writer-callout-warning { color: var(--active-primary); background: color-mix(in srgb, #f6b84a 14%, transparent); border-color: #f6b84a; }
+.writer-callout-caution { color: var(--active-primary); background: color-mix(in srgb, #ef5b72 12%, transparent); border-color: #ef5b72; }
+
+.writer-preview th, .writer-preview td { border-color: var(--landscape-delimited); }
+.writer-preview th { color: var(--active-primary); background: color-mix(in srgb, var(--focus) 12%, transparent); }
+
+.writer-toc { border-color: var(--active-delimited); background: var(--landscape-secondary-surface, var(--landscape-secondary)); }
+.writer-diff-added { color: var(--active-primary); background: color-mix(in srgb, #37d99e 25%, transparent); }
+.writer-diff-removed { color: var(--active-primary); background: color-mix(in srgb, #ef5b72 22%, transparent); }
+
+.writer-color-chip { border-color: var(--landscape-delimited); }
+.writer-multiline-quote { margin: 1em 0; padding-left: 14px; border-left: 4px solid var(--active-delimited); }
+
+.writer-frontmatter { color: var(--active-primary); background: var(--landscape-secondary-surface, var(--landscape-secondary)); border-color: var(--focus); }
+.writer-preview sup.footnote-ref a { color: var(--focus); }
+
+.writer-preview blockquote:not(.writer-multiline-quote) { margin: 1em 0; padding: 12px 14px; color: var(--active-primary); background: color-mix(in srgb, var(--focus) 12%, transparent); border-left: 4px solid var(--focus); }
+
+.writer-color-value { background: var(--landscape-secondary-surface, var(--landscape-secondary)); border-color: var(--landscape-delimited); }
+
+.writer-color-value code { font-size: 0.615rem; }
+
+.writer-multiline-quote, .writer-frontmatter, .writer-color-value { background: color-mix(in srgb, var(--focus) 12%, transparent); }
+
+.writer-preview code, .writer-preview pre, .writer-diff-added, .writer-diff-removed, .writer-frontmatter dt, .writer-frontmatter dd { font-size: 0.615rem; }
+
+.writer-preview pre > code { padding: 12px 14px; background: var(--inactive-inverted); border: 1px solid var(--landscape-delimited); border-radius: 8px; }
+
+
+/* Writer document tabs. */
+.writer-tab { padding: 6px 10px; color: var(--inactive-secondary); background: var(--landscape-primary-surface, var(--landscape-primary)); border: 1px solid var(--landscape-delimited); border-radius: var(--radius) var(--radius) 0 0; font: inherit; font-size: .78rem; cursor: pointer; }
+.writer-tab:hover { color: var(--inactive-primary); border-color: var(--accent); }
+.writer-tab.is-active { color: var(--active-primary); background: var(--landscape-filled-surface, var(--landscape-filled)); border-color: var(--accent); }
+.writer-tab:focus-visible { outline: 0; border-color: var(--focus); }
+
+
+.writer-code-copy { color: var(--inactive-secondary); background: var(--landscape-primary-surface, var(--landscape-primary)); border: 1px solid var(--landscape-delimited); border-radius: var(--radius); cursor: pointer; }
+.writer-code-copy:hover, .writer-code-copy:focus-visible, .writer-code-copy.is-copied { color: var(--active-primary); border-color: var(--accent); outline: 0; }
+.writer-inline-tag { padding: 2px 7px; color: var(--inactive-secondary); background: var(--landscape-primary-surface, var(--landscape-primary)); border: 1px solid var(--inactive-delimited); border-radius: var(--radius); font-size: .7rem; line-height: 1.2; }

@@ -1,0 +1,185 @@
+setup:
+  plugins:
+    -
+      name: bookmarks
+      version: 1.0.0
+    -
+      name: cv
+      version: 1.0.0
+    -
+      name: directory
+      version: 1.0.0
+    -
+      name: writer
+      version: 1.0.0
+data:
+  bookmarks:
+    -
+      id: 1
+      label: World Wide Web — first website
+      link: "https://info.cern.ch/"
+      tags:
+        - 1
+        - 2
+    -
+      id: 2
+      label: MDN Web Docs — Progressive Web Apps
+      link: "https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps"
+      tags:
+        - 2
+        - 3
+  cv:
+    firstName: Camille
+    lastName: EXAMPLE
+    title: Cloud Platform Architect
+    quote: "I design resilient platforms that make delivery simpler, safer and observable"
+    location: "Nantes, FR"
+    phone: +33 6 00 00 00 00
+    email: "camille@example.com"
+    social:
+      -
+        id: 5
+        link: "https://example.com/camille"
+    illustration: "data:image/webp;base64,UklGRiQoAABXRUJQVlA4IBgoAADwFwGdASoAAgACPnk8mkmko6KopBOJURAPCWdu2NUXNgx2F/WvcujGrbQBMbu25yrDcgUi4o978+253XdgPWU/ktQEeHulyw/OZ3d4gWT96Dxb/s9i3PQf+nnS/bhYtErk0/iSkdyxhVWHh4Cz0qLhEHPus8y5l5J4DZS/PtjvrcMP4f7VtLvFITEGNAUsJf+QkPYpsnx/7CXS7iT0VbcX0HeKqvecjimjYTZgRif30TVJrzBNinBO+nkcqFi+nRvwrVTsFGnZALdjuh+18iVPtqkyCTcs7teshjlDm/RkYJRGojQiUQoQPoeIw1/Dn5XDi7G0Fv2vBhCHF7tJz8A529IWRvyuzY/tWzyFDRFKCC7XxUP1vYFjgWQYx5Iuo25JmRoroPeBuZc05FcUYq4720zZBuLZSmrene7lowPtcbpRD5U8yCm09l5ZxMVjShouhmksjkhfF5pqbCVw8cStJhFRyVzz89nIwVjixdn+sIY4tfDZCHkLL3n4l0879R8jSi4KVDNBrf/XK4ZYuz+zWD+gqtwYWRhBQAC6VsJHlWCWD1OK9PuQ8sgnNez3nJeyxOItEE/5wseWeNNLFpA9vKkBHHcg5nnUQbGicZFAuF3M2fO5qbdQAlIpxEiTu7kBLlNgL4bccRxNvwNAxn97+iO3Deg04LMARjnwH1kWU+4ljWfWdFk6yXawK/A5XQRrLJaWIQHru0b4nnTwRWKxMYa1bKF3GFx6WGiiNzw9QAVwU+dD93MAO4PnG9GG2yJO4ZMImuzddHuyavTV61CcLhM4yDBXBr9o15iRj506hyDC3laPldz0PgmDAvimlyXfNBjY+K9+nqIRMcrNXcTZcSxLEa/Q+wgXzBVqexSt7WkxXnvEhchItYRN8T4sm+MYFq9zKI18bsXUSaz58oSfmQDgqQNekN+0TC90/0rWR0a5qWNTcAxVf18jj87/xQeUWtt0VIZNK4hXN4tqQCY2Z+Mpl3emGXLRJRrqGLSABqmu1530wZgMmXFGqQAe5B0yglqPldstShwErXxN1N3uhjma3dyLwTT9IOQ2ys+OUiKn185FZi/YDiyn3GhLqp1d9FTrqppOiQ0eBEeSkEZm390JUOV49SMrWsfxPzpidQpMo2yV4gGEhvCsbiLKMUgU/JGo97/Tpbb4i/KB6ltcpkLARtgvHU4mbEvhaKWVk8Q0np/Sxy9BaeJ4Y62xTp6c63XR1oqqgk37YOFC91E7rw+4wR/X+N/Qox5pZSkpvFp4vBYFbhli1NLdUAfhuETcG4kiSropDEttb2GDvxMr6ejGl1Y84dGsxQfMfYZ0d9BldN3ug/KiJyWtozkMyyMA7TBz7+9gq8+/VnlvExMzQn4tf+qErUYJEoeeQDncfnl3W9PD/z1/WgIfdxfLyj8i955PYu3dzc+Ttdlvgw8XocH6AU0Tq81fuvKjc4Q9KX+Xkw6ouSp66erdZrcdHSR/vXQxHdZrakeJk97/1Av0hqgFq8DJOfWU5YT5j1qevmgTDpN0JGW1yPEfZ3fa6+Z1D8a2zPavKKQ3LCOLK/rok3Gt5CEgv5o+WjCAipGzgRQ9CYaxKzBJN1f4N9IazyvJ70UGCjLPex0Hzx600Kiw2t7A/KFdBOzm9XO8CZD5CoAXrmdcWmV5LgMNI6qc97rVFryY/O6lxwUHXQv7hEsG9D+XL9RqOazX6EYmmFVDQpB65mcrNrujl4S1W01vl+4ZHlLpArP2l64GQY0Pk8SMA3DaXrXZ4RQT+aw8vQGhIAETcdHogch7FITHKE/N9qo1duMMVlOxNOZIvg/Jdtc9QiVDtf69DNqxgmFafY9HVZdVj/dcR7cqjC/OPG65TcS1p1qsXWwYHlUAee7vzTMKdWJ8G1gJgM1L/l16Pi5QanUseol28/69m2n55GMK1X+wpKsCK0xK0zwheTte+uv//5l5b2FLMVBu93HmBYNAbf6fHl528soqVp0aWzWX1NaT8HVpbUJotlXjnwewbw8xNht2WXdbc06OV1MPyf5I/lDYSc3nnoyN4JRto/veunZovsnx/tXvPjyznVWJJ11WD7qHxoUf2BLwJ8zQAibryIUVXFDut1d3b12620UECHm6hh4L0jHSt97XeaugUAhZHTSq3MKKIV5QOHBuk1YLHy1f23/4ivCjJVuf6udn//dqQT+4fXtnSNJaOPrT/JJFALiF2diSW3VWxJ9KsMg65ExZnd3l68RYVqBGW0xrNOHFvfVNJdp75zvjNz/2Xb8Lijf1o96HaWUD2jOcTBaLw072zTY9T1Wux582rmc1WzmFFF6wbfxO1ytNBrhTWOooB5xvF92xbUfOwhY4rOt5MFGuDpCwz4wsEZwhynHXBFTGl9iOCHLix29/UD4BE1n/qDCxT/8W6FtfzB3um7wg1URSHWvGHLyjJp4+oVc3AxSv4v/9emamlVsiyPisSbvAXOCNmqiXNQlUjkYPzb0WrF7YjAhi3eMIRsDwIOxxHWEWG5rjsoDmFkfXVMYIR3oMVLNn65v6H+B8j9GnTofehAehwVkkbfTzc8czZ6gC7PPossbwfZ+9T4yNv+NwM77gugg66ekuGRNvWaEgfAOS1ZZ3wr3QMPVO7hJ/lPuiIKQMLWyi7FCUfJ/Is0xSt1+wqKgFLgD6GuZiQ8BJQwqHl2RBtKCt6HsDoKdqXMK1IOiTsqiaqN6f5XGX3zO3+23Pp28f88e0PCf1EG80zo/EstU/r1JUUHYWYlLlx+d6HB14jFVHRH3rr9QyfXasH2JUH+q5MMsTaFhzWMeOLzvOBcs82d+v0482XXSiwVrlZgIfZ4MXz/wulns1ZSPP5ztqPHt+qMjFAd+4Ivv40glMz7lyJqfhf+QybTXzl+23Xd5X1951MCL4DBT3hJXnZilARZjz79NKSFj/CO/D3A2DnWrqTpypIrYpcNu4DGiiP6/tPqUEXfuWYz8yU4SUxqs02MUd+ySYNi60D6CrVAQ22TRJvYoQLOJwAPs1P/tRn5iH0/1gVkVE/uXeAdEwFVTDyADduGtirAVXgW/O6IuqHiu9xxCpedts7Q4PsqzPmLPF1MlspoQY0Pfwi35smpIaD8Rk/Kt+psAnfzVUvNSIgxJT4mitB7mwmMyoYcoTQvF6z9ikuGr0adoJ94IwifHzySKvigXAtWS+6jROtw+fW3Oy70ze8RbHTruGLZ+fnLYJqZz8Pv7HxPrUvLKGm0dRfL18fpygFcmM68HAJoTH2Z4jl2F9WiyCCUwV9wIA/lITsbA7tTWFmvpdpTaUFQJspcbTYMUUipIZnml/EEQAz8LrDLuEY5y3o0QJZ77uEIqSd6cvd1cNxRHW69wuoPRY4OZo8RlACPBMfq5GVEswIhfZUUx5/zHlxiECxHibXZBz5uGs0b/yAIt+klt95XqHdtRh4aB4ivsIOLmKCIy11ZlkJV0q+/92LlrWqEqFbrL348CZ35HBwXY+DzENrSBazkziNbvYbHMXAUSGweEM0LgStacqxSAhTYdg5vac1mzXDbUgImPy9ysR7Pu4weNEnacFH6I7t06y7v/ujY4wJ6tJYpItIPYDKhP3uHDzRwpQI3euusufvhF7gHdTHK/6+NQW5UDaJwDepUns9o07Qy7eM4AYTy2/5oQjXgeVJ9z/UEtHSvqCmPoWsMApcxzuOJI1SR2nOq8IGO0Fn7El2uGMQkvyfZJ7V+V4rv8O/OtCvahtuwvZI1v75bwvC2gQ/W10lHC7/HF6cPSH+mGXG0xlk6bmvwKTR0rrOl/7Ku4dKYVFhbFIi+m5ntrMO1dhqvRsiLptOe3qQQff2T3UjlHNuyCzF7DsimH7ZTp5gMCX8TvTMuxyDJljhPlyLLi5jalXJdPDA+iPVpH33Kw2xOSF1WuKZyvVbTAPIK/S9zQw2J4SuglhAPlqiEwVYCU0KAqVya5GjUjc+SXvueezkMS23XiZOBkNJBogBG4qIgEjHURmolsjzVVQalCw6paLef3cEghwLqkReH/uS/dNPgh7YfiE7gOSRCl5M0por1eQartljomncWfSa7doICfIu9St6tMQQI3i4LkxkrNw1WT6ykDRwzxpRUyVWCbgOv89bT0H22RZdbpfb+7GV3PmxYq47K+CBHjCmJH0qBQ1ET8kfiAJH4/Mrm2wxJmnPdbnyI4p78hGpABj2ZW7blrVPV7EYlro33oFH42thwmt75eGUExUUPHLiRDcGy1BoAQhJP8fHCqkYAyybGObfqLPqlfaHdVYh46AoD9UqGTWDDhBH7y9AoLeJTSTxSLLuWM6F95RXUOMj7nzzgTpVVVHhSCbQohAibwWgFhiz4xrnB7kWe+JcedHXg2f9dZ1zYNcGLrLO4PwzSnAQNLtfdYZN46XswG0hWchJdlgGet1g6Qn4Bwi97Ke7UEv3F+ZGEVsz1KbLWqLEpuFtMOygDRvebCydFDOReISmNLMguAu4YlWZ7iGZrA7FyAtVbL8H5CI+gq9WC9SOuHbM+SYlF457RABkLl+Aast7yDEKYL4+X1zLIEVayVJEkajlEvYb6iw8o60677jIBe6fgxFVRRGCaGbEmteL/no/pLYHcVSZCQbqg6eJ7YfbiFASsaVWnbuKd2HlEFtetdQ8TET/EPYLhmTngxMRUWOzxdv+328dKpgNoXP/d/Pvukj/FGVLqrdVWyW9nNttqm79aaIOXoG4g7XLPsgJKMx/1rhzrDQ2mtf86mzPsDB7vw7ydloJavOgD1AeQqlWbl2IfJefa8iHCMqbTHtVlEMdg6vBhjmJQCO6liKnp3ijnbdmSC2T9xlLRWNJxiJthxvFIPXaZw5mSeSNNd4/wJJbx1BMcrevPW+/+pT48Ba608QFgLlAimIdn3emX9kGePF+8RC2UyTvqLpalJBSFPNhF080pJBUCm1GPpBMT0HQwBahNs58fWUSISVKtIrM3duHugn5oZlYQW/LKsMRhWdwoqoZ9Q9IA1+1ACoERFyUM2jZ/GmErkPMWgc40Fpq+lRRHHMQKb1onDet1JrGx3CDt8+tJXKo4sEun9VHP691o+JxmP6ZowHPLnPJUdRonjnWusZupYakhlNUREu3DtcadFAVT9a2VkJHo52W3FOBW6eInIJtPFeMSbLnVMXaxGBXa2N9bbY2UZh0tpLfPEtUHuaWG0+jgL8l3E+g/CKADVk0+BmRlYfBQrSsRrrnGoQKazlxwv2OM29yPoVkhaGkZLaxSdMqwbQeEbRxSr3JZEfT1GQPu1n3VdGEih17HrtisZd7tuU+H+BMnJMqMlfGY95ExrUtbanquwunPm2NKGbk4+ezeIpb3UdOfB/Cr5tW1TjQskEa9Dnzv/SnDYWVIFViOWXbLuO7vzuOyvOlqTD5Lp9BDTJp3dwCt1XdugjCX6C23QSWR+vY6mQQcOQN/wwRL1ShRhUYuEZn1CVJYLjs7PSA2g/PalWMbFByK0qmRt3kYUL+M0+koLs0duDp3FwZPvoh/N3B6mOsl+GaWmdvgdYL/hhXJNO/DPQhBlFJJre+IeUcQ+R8K9R6y2hAlQ6muo3Kah2zPKqwdzfIHHsWnMbqGZc7o6lI9x2EKEbSl8QYgeht0dwo3A+cCJuR6OZ582IWaDe/7+LRip+CFaBjSOmXQ8leeLxYz4N95KMpHSXujKClUR9Ho22JJMxHo0YJEKnPUmpmTMdPi3MGH6ayCq3FMBZ25o57IaIxDzFecFIe1dQ3KPbq6S6rqZfCS3vmZVYgLHSRuY/8BI1280rLQaBr/nShGN5EspzkFppJnISBsGnj9lJCNcht6K48/8PGFh/2G9cEdFWNcsuhrXy2vioSrTcXVyW0u/62OsqqFEQ+77Ie3x/P62x15rgNV/ypPGUJYYb72Qb4iR8GJXQ7gEk9V5eE8JjsOnXtmrddolf8sHccFrBQYwHn9zS4mH7LBTM8TUqNOKemf2zEjwDIC7AgQnsN/LMZZYppxs5u7e9xuenVtdglASx98hhDhHLG9gEAb6EE7rWBV5pgBpa6F0Qt9kVBppwAoPynrMKbqPPbSI6hVklFNYo1lKSuVBGurEu4pDVvX9PvtOlkhgphFLke/ChGjAPBs42BXoVLcMD2mLLTbN073J9VVOCWHuvKfgbfVzsGTZCA/QqIVRwIr3qd3gb9XhD164Dxf11lmSFX4dVO0g6mfhFIp5QUyJ/wL6VMYXKZKrFCcsJ7iNy4cqvPxmcR7dHG1UVzoBIMFuEylz1o7AdAeRMEWv93iJuvVHARNDnTJ2UIP0KHVhbcUIWenhygXDwXzWD/85orUrz6P0Pv8QHT6dIZTvuAbC1Nc43LwX7zz92Yq8c1FQZe31O7/Xv9Cq13daTCy1X3Mv2FuDvVR17LgTd10C061mxgZyxwcXOp2IOG+45WtdBxH4TFpG0UKFSejGAolYrwtsmcJi+3T2u2tqh27Qi2JRjUu2eDjzY8Lp76TydYaoQjNtsAeAnYTFV6IfUfzItUDMAbSXojkg2QgAWGEoxIw/BQwxL4ulCOQGH+dsKd6tyeNetiK7fC7/GUbPI8pQ1TBcOkaAJ8VMnyZ5Ww4rWjXCWZJU5qPkHOVXDwgqwX/StNKKrcvfe6RQe/sRrlNTRhaCIspP6w3PoEbN9at8GqFXX3zgElhVsdFMgFgLDCHgyByVY4CR0Okvn/9GBmCU2ySDa6qyw+VXrylvHrV+qrGbBaBQqTQNlBkZ5W+S7n1iEFKMuS0OI81O15lLiHxkRcO+ER6/dk276twLGDrAwnPYfB7LhRpuiiw5rO164brXpCqLiDL/9nE0fGcIvXOJhDgNs9ppcKyb8saIPDB9nl50SQkoRH7YgQEOSxBxloyOuDI/QptGCPD4x3bYmoW+Y98oBy0fH5oCjXuyxewsD5qG9tD7E2huYyumwurp/jWzpjJQbYFkWXd/GK92TpNop4D4x4Olm3t3CJiWte/iXX6Urr/pXw7juQrS3MWoMscIfhV6zHOW3PUgKOwQAV5lmh3YUjvohtvSuM6HQJgeMFkbZBrgzcqDm/+t6tvvJilnyaJxP3SRt1yWC5SzD7inaFZoR49jKHdL2sVX2wkSO74L43fpgBfQiv2B31nOgfDCHslWBP74CEgqTcxeOLtrD37Dq6AypexRyUcB21CoZyeW/WBm68DpYafL3LbchqQxmbXxwhQtWS10VArC8/O31gViyu87nlhbLLwpwpuPUMq1wZbISiwAfQv8YdzexQPlYmahYc+aR+h6iR/F1kUshQIuuGzzYxPOfF/vYehBCKGS+h4HZWc1I/VGsAwBzxwgXwGdgbfcYgGP6M3rmQ+wPVIbJEqyz218f8Ulhc8+cksrUiecOqI7lAbVWnc2uzioPszkIRiG/BW+4Ah2myA6BhOpZHBzQRhOMZBhzNqZK1DG9oFYmnghJ0iS7fFf7qoq3ZfM8R43TLDyFSEdEmlwMZqsVyXNEGQ04ZVR63RCrY8YlXvpmF3Kbrom74X3DhPXrpOGz9naEFzS/YrEkbzE9eUJasiFw94GhbzWusy9K0tn6bzQiVw4vDBTrbZjLIYyYNfFWjEWFKQbt+xdE6h+ksbLTPu+DLR7UUNE/ueby5g2zdfJTrcsqRdtKG9d1ks0bbWuS1LAEtoz1kOM5oN3LtM29kYueA34wO1pAALHXVLuazXIkZCSJ8ZOND2ceXS3ThqKigzaNh9ujCHroJlQBPYmr9yeZH/HvPlnKTmQ+XxORxVQWWnwELIlGuXUYrvqbEAwy+3TcH4rUImF2T9GdVwGq1qvC0ogICqhaNdnFBZjEd+0pm6+DXxZEH1QTGjXBvnKBjZLsA3gzAonPzFZ4F3TCjz3IpKDE0m+xqQsRfwHPKj5OEy8fOug/euwr0w3dV/3TaKwcj3XopVTo89aM+poJY04oTvKkfS4TsNIuPtRpOyGvSMt7ZFvAu67x+oqi6UxyINnGs28MMhgk0hiXi7GDpoBvbkGFrzb7ra7+gRKY5aQb2eaI5BCv3y6IuNHxv9SH0HWOezmZ2zCDpCuqN21IImSYl7GVEdCLYAVk++Lm4VoJAIOyMyiFTkzZBx+bM+mBXxtcwN2Lm+t+OWL6/bU8DplzlocpjKIEj7ZMUUK3AoDmdu6BtR5OurAr9rNahCKt2sVhamBRNfVZnPGAtZjDj/syeANOT8kvsCSD2DAzD00IybO6ShurhNlRaYFyb3sQSWop34Yg7HP37wPDyMgMKduKc2hCeVxM7H0dPo4629+JZZloa+YnXtyh2M0NuvmNj2gHXjEz6kqREFfpE9IflpLIGLjWzeKHxwgxcyhqCJ7dg1dkA/r+Xf1b/Lf1cEA3nbWRJEOLNGy9Col5ExCwSYK4igyl8rVqDtxEIAI6Y+XDxGhYGyaB9cPbKxZTxzxzSzUovAPrMupDBIcFNMQwfDYy7yjcLbwNaXqAFqW6IS72BK+geoWVvOkTm6qr1BCai8piW47bSgqLPVfjGr/CttIzPWvt6jGkux3IiXxm8/fbEgX7pJSbYbwz5gIk6NHMvfXaIWb+iBlFBNMh+93a8xZPbn0x+9StDgTreMuh3ZleTvnJ6MFE+mZFD6pOgcd7k6gfBX3yQFaHipHBGT64oVBBYqAbA7CDiMXZ6jJ2XOEuaX2/NtV0cnIJ11/43mkmOm9h5zG7ziAYqrd0k0B/gf49KDaBdD740MK2vv8JtA7LyV7Xsbc6uiFG7XVdEm+xEN5wyw+IZMIi2mnruTOcH9q4JVOI1Fe9ClpktnV63OeKZbtZIDaxzw6gUh7g06qgsAiR7JIutBpADBlxPpHVeT0ePWqaUMDG8ihGP3UAq0rm6/cjPYAPnewmdslYJ+odfLrlF/N8OwahTiC/xK0BPTjqXxjfajAnuTpypRsi/nJ7ElC9n6mQoKLzd/X9VLSDpZh7lUS8k0E+o3/qbl92Sg7RXnxhcOrCFQvxuasBi3TI858kxfWvfUoLxm+8BOhSGgxVd1CpghInStWOXHP9w/W9PCdXqdW2DEEHuq/i2VgoGIFAg599epOonxRTl92LtbUXbjMnLpCkIKAQB01i+omohx0iPTg1WO+eeGqRxQGpUi4jb1mYB7GX+bCVcz28cx0CQTzNcBXhH5sKnncijYt6m6vS4d8Qu5/l98doFvif6EDpCmXOsouTGHuN+PQfDd8DV3mV3KZwHBTbyHEq8nxABi8yXEGm1m9QWgtufrP6jdgB8xXZvhhQmjY06u49/asuQ5pJqnIkYQi1l6aeEeKQmiU3WSDkmYXceGTUxV1Pc6EkVPBONEO5GiHAkRfn5nLOBAnlkUqLSZsU4grz0HYBLsiwjikchvoIoZ2hQaxdapIZU7OQxbbDpGulavj5XjnhkhdZ33rPuQSNEf1dCJTdZLgYXefAQLdcrTlT5BNhwnx5SB2iQXayuLXe/gzVCvPi+bucMdc6NGc/pgQwqxlhuRrSI/klohRUgqHANs/OzKMpc+3FB1UUI540IeG06WRGeICEIHbENzLeNge+yKNwtcOSFCzilxcLDqcAA24qpGXJg8G7QSK8F9y8yEvATdpityzCxZ12z6u9fOv6MJsfViD41Zxa8HYMmz2JUpMMx0ABf85LDGBYOa1+zljWFQ93PP3T0nqByyFWaeKLIcZaY0NsAkvf8ESrxSFbjx8dfZanIs06yJ1KQo+Y+yoyxaVV/GY02WxdaxLxA+U6rJtAWvurdGMDhfYqV5EIV9fiZ7gajKQ3oViVvgwPjvOkVxMm9dtn1QdDAhqYMANV/SdmfhGPFw9nSksq5W20ciZHgziXPRFNRNklzmaD8Bs7yHvPSqQCqlCGu+w8rOG9GJ6pI9xZajOzyrOu4AB88CA3aXaLtPBu7SCExVm+JUaog2fxxxIVqA2KeFZTVZlNqWvy1rCsP0i9Q9GMWW5JgnjwWmev2CSVZ9WCPyIjDbV2/n9NpHuNIjXUxme0+fobOLB8G0p90oZE1H+LYiqtpCqugu5eCqLknRTVSQRtqNJseU3s/F0n+V4MJuouL9GCbNEPV+0kU/EOV0KTanR7RZJfN/ow+AFsZWiQnLqVsBSoobjgwZTjClRPreMOfZ0dgXYzd9EtoZw3J+srZgsCYSx1+Q4JWeN04FrCqWGBl7k9sTrzSUpXm90lVE8qfgp6+gxKQtb195fOicX518jW6FfDUslRu6rVG930rRIiVG43LRxdJt9RNIrQXaHfK+R9oJiBAyojuGKlJdLDxVe6xH/MVBf74nxMAVWTaQ4y3LadJUjVmDBEBbTGXSaza5gyibS/v8zZExfo5vj8LkIiWEnnuVSQ+2NJijiBtCbmxc6n75z93z1IizYB9xiDmPFhiIrFv9mqQgoRFfCZiCDbSTfU7Gbo3zidJwHN0Riu5EOKqshn37NtlsnHx4vLZwuQpad22Fi2GgJKy8eiSXCOx1C0TCc5SbEMgK0vd5HZmxPhfgdxT45fxISz30bjjCsGQtCSaMlr3NUGWC7RDnsTLmsr66fdEy8K71iLpW3uP0zfudxYGh8rO4A+INg38YLljWKqUNw+CnWcErT2xrAr3WttzBkPl5/LazTTcGQjJMOGytRsDg1ofZlPSimIjOzCWvBKRhcjuYI17zcXe2H4iOKykEHTHdeVMgByBQSBLJ9Q4JoHcSdjx4Ms4dN0WHBZnzRHIhFwjLkdfy9LRz8pnC354gnBXowHirgfMjVhPltSoTyex2JpYK0l09I1k4ymqcZSIwffREqlrwUWepopPSZgITWgwSXX1M7/EA4UdlwTA1P0FnbzmNyx08P0leK1Tdcce7PT7pJggSwCTvri8bDnBer8n6J8m6fztW8+pSNmIVQlomO2KQk5EgfSZ4iDRf/RWEBzoD1uPqbGB2VTmEcEdzSsTp3I8pzo2pYjO0AoBvX6Vh0o2D7Zuebu27h1mImAKZGIxkOl8qJKt9sdu36WumnEVg2vxcZA6EBNcr0Rm5VPF/5lOiLWCeDRVHhL6VGovOngjf26LRlBlCs9KAxQlAUSxJ31AbcFIX0XvFP5XBWKba++YG3xjrVox6FpxMb2UpWkb6dL0V8iSdTtdpkFK7iK/olTRrZGAphXXizzShDsZAzmYfH9ugW1LTc/f2IAnRpXxWSocoQaJdbWGG4CGYC3hV0HzlhudYGzc+OPl9ADekjNOEETT3UpK1reBCDrkY/SBpU3aytWMF7y4LMfbMompaf/o3eP2S21whA7kH0px9S5xgG9cCfOnjZm0bddnJk7Lo5frwg196EBJ5NFSe5u611WCyv64qrDrFBpDjrWbpKOaci4MSvxQ7VjDtKlQJHGIKMYYT4mOOEQ90S+7t/Y56P8k3OdvVfswkCol6F9Mlrl3ZDE9vBsl3zVplrQAyWZtls48vCS+JsBGo0tyWFQrmF+ygj6U+n2tyb3j2qXFhLRS0mfywgAwhffukWNiZhMicKqiXTXzpJzbetz4D4eKfPfwdqA2JZ0tqqvBKVRHC/6FHK5MSwJ+NlQInxeKME4xK2kknCGn8hGeMIP94+C7jRCiOR4qNWXt2N4crMQ6dR6J0IHJoFeYoL45HCFSKSn3OPEj8Yq+u7Bu3qjiyeRmjjtHIhw5/lZa5EKNY6IbY98kdEoD9nZQiuHx0sFwElSTlBzkK7bFqFeXfCbrh/2MZ4EgRNjmxoxwVBmTf4TYwRtM40DCRpB2adJ9f+2+zHfHQuuuUp0xLA6EMnspthokgRWT5/HratKTLUOnb6LxYiWXvNcBROdaASB6ErcS9njhKEWQZYwQh6V9JCk4D6H3oPM5Pu95YX7Iq8VbpeX1c3vQhZXC/ENLr/7VKydWaSXKXSBOHh+OYAGIadH+4NnXLVetdg+d8m3ifkz9/6yM/b+GrlesHBbGIcHlQ3mQDvtuCChsGKncugoKgC3X0LhRk8glzbvtEnfOG1KJQivL4mPmedd0ulR2Z7ZJsSI1Et+zXK1J/oWwW0JtvpI/L54sINUpoCMJDzsb0UpIA8LjJxnS1gJR0lpskQ4bCLZo5JBjnYdYWsWbQ8PzRNz5wJn+N/x6t9WmghdEbzqzxdUU34AU5L3o0zO5YgRxVkF6cK9YMnEHSsF9oR0G86/1bF5ai8AdTYJSqI0MhNvui1P78TJ7qAEw4muOyxU9rDsxMmCzUtvsm2Z985eEoTj8MFEPOWEkszOCNlOSQ3eEM/NZsYP46qZer7rQfopEVmJL9q+NeRsMqER83grkgSjAmm0VAu01fjpP1w0/MF96ZsGkUGKDz8WLZEXeZezOJIvY4s3Qa3e/1M+kQCZYVi/14RkUd3yAvN/Sz48CGTPY/fla8K3bj3lkCKb1qbiaDweATIRVe3vxvIYiz2Svh8igrw8qFcXNIs8XzilE0E4HMEmF3QDUWmCiiNcIeTpnShxDFdiWbAyoGDg/jzJce/zGdkeVSLsb0+viMMd6EwPyec0b7zeaX+14bPm0z7uSyJpGnmHKs7p1pfu5FmyL8r+UGj4khip82DqBZ6vOcpYybw0aDWhCAb98IRO6gG3onIXHeoCXgNaTePdhT/j/ksCrYcpq6j4+T+Na9h1gPv+E5ihwh0KJhDFxdAjWcPEOHhpPPIi9B9xHh3KTbYBhVl5DkLnpvXf2nQpJ5xjDg9kRK2TDVzh1L1zjjUOnvxGA/apJADJGYSy4UeUR6kUIfmKQ0ptJ5S/hYKSgkgdfpus2K8deS02CvNLCqHyE9MXaRqPTyNICFQa99V+XSD8PR94XxALFDdmBq5i1mD7vlYWZCWxn5eQpRGowB1YJk/r6UQqBvWeEOXiaQkdBmCFA+WJYcfxq+iuMMlf0w2RLkiCIWftbZjTvtQ+wA4SBhYdpHAY1lhBJ8YU6J3J3UIaHRa73e9QBNA0rDtUOTlWVfVISAB6k4gseKWWy28SCsAgMXk/fGecgUEbNlauPBkgVYjcHUny5sQQzARU1PZF9hbQysllEwf/iJxY+rkBrVld9uGqsLHwTMV2t6Rr8V8P398O5wRNtK2z1C51xkmIdmBX6CUZWVpc43OR5ajDOdJy3jIrOLgYT/tQNfLieyuNeqap9LcbK98nUyW86POtOMJ9ew23Xeg0NL68KW9G/K56g8pIdco3rPAUSJkWW+gRBQEJB72OOyxvCiNR2BHl+6S/RueAM+L9nCX18O/gcLCCRT2tePhLkcsOZyXhx9O7aXseeG29+bXFRJVztrkY/YT2tyZbsvKkCWFAdNKh4l8V7JgPioBOOKOkYG96NlkmH3lUIws+XdvMj+lBQGxCjI5iqigpbYkZ+ksHlH+H2EhAQ+SJq7Y3IlJsoD2BDliys0L19/6/0fSkz2DXqMzpaCM06MYvJoBvWXRs80QXA7FIAIWRafinILSiz70Zqy6WHGgMw+nu1w3uHbaeTP/u+toAcYuka0SJ9LAqeDX/B5ZyMGt3UpQRkDRkVloFiZqAJSB8aT9YejVzSOoFZQXq8i5Q6LehCTjlSxwGgsa/6dc/pakBrL93Fjy2T6EuvyiGyWJoQwwaZislsGsRBQimUkBI/vjd3vBU58kO/VZZNZlzKdDJRvlb1jMeV/gPOyupmYvJCq1KeXmnIupzfKSuhRuIpaO3FSUqb9jQJYD0mzVkmXAi4Ekbe0cmwJ2QYFGEUBZQB1fh97RwMGNzZYKL8xgdCm93Q8ei68rpFbunFY+GbJ6UcHq8kP7sqGP6ob5TUEJBEt89xQvCAAAA"
+    languages:
+      -
+        id: 0
+        rate: 1
+      -
+        id: 4
+        rate: 0.8
+    courses:
+      -
+        id: 6
+        rate: 1
+        date: 2022
+        location: Example Academy
+      -
+        id: 7
+        rate: 1
+        date: 2024
+        location: Demo Institute
+    experiences:
+      -
+        title: Platform Engineer
+        subtitle: Build and operate a shared delivery platform for product teams
+        kind: permanent contract
+        format: hybrid
+        organization: Acme Cloud Studio
+        illustration: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiB2aWV3Qm94PSIwIDAgNTEyIDUxMiI+CjxyZWN0IHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiByeD0iNjQiIGZpbGw9IiMzYTUwNmIiLz4KPGNpcmNsZSBjeD0iMjU2IiBjeT0iMTkwIiByPSI5MiIgZmlsbD0iI2ZmZmZmZiIgb3BhY2l0eT0iMC45MiIvPgo8cGF0aCBkPSJNOTYgNDU0YzE4LTEwMCA4MS0xNTQgMTYwLTE1NHMxNDIgNTQgMTYwIDE1NCIgZmlsbD0iI2ZmZmZmZiIgb3BhY2l0eT0iMC45MiIvPgo8dGV4dCB4PSIyNTYiIHk9IjIwNSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InN5c3RlbS11aSxzYW5zLXNlcmlmIiBmb250LXNpemU9IjU0IiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjM2E1MDZiIj5QRTwvdGV4dD4KPHRleHQgeD0iMjU2IiB5PSI0ODYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJzeXN0ZW0tdWksc2Fucy1zZXJpZiIgZm9udC1zaXplPSIyMiIgZmlsbD0iI2ZmZmZmZiI+ZGVtbyBleHBlcmllbmNlPC90ZXh0Pgo8L3N2Zz4="
+        location: Nantes
+        startDate: 2020/03
+        finishDate: 2023/08
+        achievements:
+          - Standardise infrastructure provisioning with reusable modules and automated policy checks
+          - Introduce service-level objectives and dashboards for critical platform services
+          - Reduce deployment friction by creating documented self-service delivery workflows
+        employedSkills:
+          -
+            id: 8
+            rate: 0.7
+          -
+            id: 9
+            rate: 1
+          -
+            id: 11
+            rate: 0.8
+      -
+        title: Cloud Platform Architect
+        subtitle: Architecture and enablement for secure cloud-native delivery
+        kind: self-employed
+        format: hybrid
+        organization: Example Platform Cooperative
+        illustration: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiB2aWV3Qm94PSIwIDAgNTEyIDUxMiI+CjxyZWN0IHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiByeD0iNjQiIGZpbGw9IiM0ZjVkNzUiLz4KPGNpcmNsZSBjeD0iMjU2IiBjeT0iMTkwIiByPSI5MiIgZmlsbD0iI2ZmZmZmZiIgb3BhY2l0eT0iMC45MiIvPgo8cGF0aCBkPSJNOTYgNDU0YzE4LTEwMCA4MS0xNTQgMTYwLTE1NHMxNDIgNTQgMTYwIDE1NCIgZmlsbD0iI2ZmZmZmZiIgb3BhY2l0eT0iMC45MiIvPgo8dGV4dCB4PSIyNTYiIHk9IjIwNSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InN5c3RlbS11aSxzYW5zLXNlcmlmIiBmb250LXNpemU9IjU0IiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjNGY1ZDc1Ij5DQTwvdGV4dD4KPHRleHQgeD0iMjU2IiB5PSI0ODYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJzeXN0ZW0tdWksc2Fucy1zZXJpZiIgZm9udC1zaXplPSIyMiIgZmlsbD0iI2ZmZmZmZiI+ZGVtbyBleHBlcmllbmNlPC90ZXh0Pgo8L3N2Zz4="
+        location: Nantes
+        startDate: 2023/09
+        finishDate: now
+        achievements:
+          - Design reference architectures for containerised applications and shared platform services
+          - Facilitate threat-modelling and architecture reviews with product and security teams
+          - Create migration playbooks and coaching material for teams adopting the platform
+          - Define observability and reliability standards for services moving into production
+        employedSkills:
+          -
+            id: 10
+            rate: 1
+          -
+            id: 11
+            rate: 0.8
+          -
+            id: 12
+            rate: 0.6
+  directory:
+    title: Directory
+    contacts:
+      -
+        id: 1
+        name: Ada Lovelace
+        email: "ada@example.test"
+        role: Architect
+        tags:
+          - math
+          - leadership
+        member:
+          - engineering
+      -
+        id: 2
+        name: Grace Hopper
+        email: "grace@example.test"
+        role: Engineering lead
+        tags:
+          - engineering
+        member:
+          - engineering
+        parent: Ada Lovelace
+    teams:
+      -
+        id: engineering
+        name: Engineering
+  writer:
+    title: Writer
+    documents:
+      -
+        id: writer-1
+        title: Document 1
+        markdown: "# Exemples de cas d'usage Markdown compatible syntaxe CommonMark/GFM/GLFM\n\n## Règle horizontale\n\nCode :\n\n```plaintext\n---\n```\n\nRésultat :\n\n---\n\n## Table des matières\n\n> Génère automatiquement une liste de liens vers les titres du document.\n\nCode :\n\n```plaintext\n[[TOC]]\n```\n\nRésultat :\n\n[[TOC]]\n\n## Titres\n\nCode :\n\n```plaintext\n# H1\n## H2\n### H3\n#### H4\n##### H5\n###### H6\n```\n\nRésultat :\n\n# H1\n## H2\n### H3\n#### H4\n##### H5\n###### H6\n\n## Liens\n\nCode :\n\n```plaintext\n- [Lien inline](https://example.com)\n- [Lien de référence][ref]\n- Autolink : https://example.com\n- Email : contact@example.com\n\n[ref]: https://example.com\n```\n\nRésultat :\n\n- [Lien inline](https://example.com)\n- [Lien de référence][ref]\n- Autolink : https://example.com\n- Email : contact@example.com\n\n[ref]: https://example.com\n\n## Listes\n\n### Puces\n\nCode :\n\n```plaintext\n- Élément A\n- Élément B\n  - Sous-élément\n- Élément C\n```\n\nRésultat :\n\n- Élément A\n- Élément B\n  - Sous-élément\n- Élément C\n\n### Numérotées\n\nCode :\n\n```plaintext\n1. Premier\n2. Deuxième\n   1. Sous-point\n3. Troisième\n```\n\nRésultat :\n\n1. Premier\n2. Deuxième\n   1. Sous-point\n3. Troisième\n\n### Activables\n\nCode :\n\n```plaintext\n- [x] Tâche terminée\n- [ ] Tâche en cours\n  - [x] Sous-tâche faite\n  - [ ] Sous-tâche à faire\n```\n\nRésultat :\n\n- [x] Tâche terminée\n- [ ] Tâche en cours\n  - [x] Sous-tâche faite\n  - [ ] Sous-tâche à faire\n\n## Description lists\n\nCode :\n\n```plaintext\nFruits\n: apple\n: orange\n\nVegetables\n: broccoli\n: kale\n```\n\nRésultat :\n\nFruits\n: apple\n: orange\n\nVegetables\n: broccoli\n: kale\n\n## Tags\n\nCode :\n\n```plaintext\n##Markdown## ##Multi word tag##\n```\n\nRésultats :\n\n##Markdown## ##Multi word tag##\n\n## Mise en forme\n\nCode :\n\n```plaintext\n**Gras** | *Italique* | ***Gras italique*** | ~~Barré~~ | `code inline`\n\nCombinaison : **gras avec `code` et *italique***\n```\n\nRésultat :\n\n**Gras** | *Italique* | ***Gras italique*** | ~~Barré~~ | `code inline`\n\nCombinaison : **gras avec `code` et *italique***\n\n## Blocs de citation\n\n### Bloc simple\n\nCode :\n\n```plaintext\n> Citation simple.\n> Avec un **premier paragraphe**.\n>\n> Avec un **second paragraphe**.\n```\n\nRésultat :\n\n> Citation simple.\n> Avec un **premier paragraphe**.\n>\n> Avec un **second paragraphe**.\n\n### Bloc multilignes\n\nCode :\n\n```plaintext\n>>>\nCitation multi-lignes.\nChaque ligne n'a pas besoin de commencer par `>>>`.\nUtile pour citer un message long.\n>>>\n```\n\nRésultat :\n\n>>>\nCitation multi-lignes.\nChaque ligne n'a pas besoin de commencer par `>>>`.\nUtile pour citer un message long.\n>>>\n\n## Saut de ligne forcé\n\nCode :\n\n```plaintext\nLigne 1\\\\\nLigne 2 (même paragraphe)\n```\n\nRésultat :\n\nLigne 1\\\\\nLigne 2 (même paragraphe)\n\n## Color chips\n\n> Les couleurs sont rendues comme des pastilles colorées inline.\n\nCode :\n\n```plaintext\n- HEX : `#FF5733`\n- HEX alpha : `#FF5733AA`\n- RGB : `RGB(255, 87, 51)`\n- RGBA : `RGBA(255, 87, 51, 0.5)`\n- HSL : `HSL(12, 100%, 60%)`\n- HSLA : `HSLA(12, 100%, 60%, 0.5)`\n```\n\nRésultat :\n\n- HEX : `#FF5733`\n- HEX alpha : `#FF5733AA`\n- RGB : `RGB(255, 87, 51)`\n- RGBA : `RGBA(255, 87, 51, 0.5)`\n- HSL : `HSL(12, 100%, 60%)`\n- HSLA : `HSLA(12, 100%, 60%, 0.5)`\n\n## Inline diff\n\nCode :\n\n```plaintext\n- {+ texte ajouté +}\n- [- texte supprimé -]\n- [+ autre forme d'ajout +]\n- [- autre forme de suppression -]\n```\n\nRésultat :\n\n- {+ texte ajouté +}\n- [- texte supprimé -]\n- [+ autre forme d'ajout +]\n- [- autre forme de suppression -]\n\n## Blocs de code\n\nCode :\n\n````plaintext\n```python\ndef hello(nom: str) -> str:\n    return f\"Bonjour, {nom} !\"\n```\n````\n\nRésultat :\n\n```python\ndef hello(nom: str) -> str:\n    return f\"Bonjour, {nom} !\"\n```\n\nCode :\n\n````plaintext\n```javascript\nconst greet = (name) => `Hello, ${name}!`;\n```\n````\n\nRésultat :\n\n```javascript\nconst greet = (name) => `Hello, ${name}!`;\n```\n\nCode :\n\n````plaintext\n```diff\n+ Ligne ajoutée\n- Ligne supprimée\n  Ligne inchangée\n```\n````\n\nRésultat :\n\n```diff\n+ Ligne ajoutée\n- Ligne supprimée\n  Ligne inchangée\n```\n\n## HTML inline\n\nCode :\n\n```plaintext\n<mark>surligné</mark> | <sub>indice</sub> | <sup>exposant</sup>\n```\n\nRésultat :\n\n<mark>surligné</mark> | <sub>indice</sub> | <sup>exposant</sup>\n\n## Callouts / Alerts\n\nCode :\n\n```plaintext\n> [!NOTE]\n> Bloc d'information.\n\n> [!TIP]\n> Conseil utile.\n\n> [!IMPORTANT]\n> Info essentielle.\n\n> [!WARNING]\n> Attention, risqué.\n\n> [!CAUTION]\n> Action dangereuse.\n```\n\nRésultat :\n\n> [!NOTE]\n> Bloc d'information.\n\n> [!TIP]\n> Conseil utile.\n\n> [!IMPORTANT]\n> Info essentielle.\n\n> [!WARNING]\n> Attention, risqué.\n\n> [!CAUTION]\n> Action dangereuse.\n\n## Front matter\n\n> Affiche une liste structurée de métadonnées de type Clé:Valeur.\n> Formats : YAML (`---`), TOML (`+++`), JSON (`;;;`).\n\nCode :\n\n```plaintext\n---\ntitle: Mon document\nauthor: Alice\ntags:\n  - Markdown\n  - Multi word tag\n---\n\nContenu du document après le front matter.\n```\n\nRésultat :\n\n---\ntitle: Mon document\nauthor: Alice\ntags:\n  - Markdown\n  - Multi word tag\n---\n\nContenu du document après le front matter.\n\n## Section repliable (HTML)\n\nCode :\n\n```plaintext\n<details>\n<summary>📦 Cliquer pour dérouler</summary>\n\nContenu masqué par défaut.\n\n</details>\n```\n\nRésultat :\n\n<details>\n<summary>📦 Cliquer pour dérouler</summary>\n\nContenu masqué par défaut.\n\n</details>\n\n## Image, Audio et Video\n\nCode :\n\n```plaintext\n![Logo GitHub](https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png)\n\n![Logo GitHub](https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png){width=100 height=100px}\n\n![Logo GitHub](https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png){width=75%}\n\n![Sample Audio](https://gitlab.com/gitlab-org/gitlab/-/raw/8dca1837e4b52eaf8711e96e1b5b8830f16b20a5/doc/user/img/markdown_audio.mp3?inline=false)\n\n![Sample Video](https://gitlab.com/gitlab-org/gitlab/-/raw/8dca1837e4b52eaf8711e96e1b5b8830f16b20a5/doc/user/img/markdown_video.mp4?inline=false)\n```\n\nRésultat :\n\n![Logo GitHub](https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png)\n\n![Logo GitHub](https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png){width=100 height=100px}\n\n![Logo GitHub](https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png){width=75%}\n\n![Sample Audio](https://gitlab.com/gitlab-org/gitlab/-/raw/8dca1837e4b52eaf8711e96e1b5b8830f16b20a5/doc/user/img/markdown_audio.mp3?inline=false)\n\n![Sample Video](https://gitlab.com/gitlab-org/gitlab/-/raw/8dca1837e4b52eaf8711e96e1b5b8830f16b20a5/doc/user/img/markdown_video.mp4?inline=false)\n\n## Tableau\n\nCode :\n\n```plaintext\n|  Gauche  | Centre | Droite |\n|:---------|:------:|-------:|\n|  Texte   | Texte  |   42   |\n| **Bold** |  *It*  | `code` |\n```\n\nRésultat :\n\n|  Gauche  | Centre | Droite |\n|:---------|:------:|-------:|\n|  Texte   | Texte  |   42   |\n| **Bold** |  *It*  | `code` |\n\n## Note en bas de page\n\nCode :\n\n```plaintext\nPhrase avec une note[^1] et une seconde[^2].\n\n[^1]: Première note.\n[^2]: Note avec du **formatage** et du `code`.\n```\n\nRésultat :\n\nPhrase avec une note[^1] et une seconde[^2].\n\n[^1]: Première note.\n[^2]: Note avec du **formatage** et du `code`.\n\n## Emoji\n\nCode :\n\n```plaintext\n:rocket: :tada: :fire: :bug: :warning: :white_check_mark: :x:\n```\n\nRésultat :\n\n:rocket: :tada: :fire: :bug: :warning: :white_check_mark: :x:\n\n## Diagrammes\n\n### Mermaid\n\nCode :\n\n````plaintext\n```mermaid\n---\nconfig:\n  theme: dark\n---\ngraph TD\n    A[Commencer] --> B{Décision}\n    B -->|Oui| C[Action 1]\n    B -->|Non| D[Action 2]\n    C --> E[Fin]\n    D --> E\n```\n````\n\nRésultat :\n\n```mermaid\n---\nconfig:\n  theme: dark\n---\ngraph TD\n    A[Commencer] --> B{Décision}\n    B -->|Oui| C[Action 1]\n    B -->|Non| D[Action 2]\n    C --> E[Fin]\n    D --> E\n```\n\n### PlantUML\n\nCode :\n\n````plaintext\n```plantuml\nskinparam backgroundColor transparent\n!theme dark\nBob -> Alice : hello\nAlice -> Bob : hi\n```\n````\n\nRésultat :\n\n```plantuml\nskinparam backgroundColor transparent\n!theme dark\nBob -> Alice : hello\nAlice -> Bob : hi\n```\n\n### Graphviz\n\nCode :\n\n````plaintext\n```graphviz\nsvg-color-dark-scheme=#FFFFFF\nsvg-color-light-scheme=#000000\ndigraph {\n  A -> B;\n  B -> C;\n}\n```\n````\n\nRésultat :\n\n```graphviz\nsvg-color-dark-scheme=#FFFFFF\nsvg-color-light-scheme=#000000\ndigraph {\n  A -> B;\n  B -> C;\n}\n```\n\n## Formules mathématiques\n\n### LaTeX\n\nCode :\n\n```plaintext\n**Inline** : $E = mc^2$\n\n**Bloc** :\n\n$$\n\\int_{-\\infty}^{+\\infty} e^{-x^2} \\, dx = \\sqrt{\\pi}\n$$\n```\n\nRésultat :\n\n**Inline** : $E = mc^2$\n\n**Bloc** :\n\n$$\n\\int_{-\\infty}^{+\\infty} e^{-x^2} \\, dx = \\sqrt{\\pi}\n$$\n\n### Inline avec backticks (forme GitLab)\n\nCode :\n\n```plaintext\n$`a^2 + b^2 = c^2`$\n```\n\nRésultat :\n\n$`a^2 + b^2 = c^2`$"
+  tags:
+    -
+      id: 0
+      label: French
+    -
+      id: 1
+      label: CERN
+    -
+      id: 2
+      label: WWW
+    -
+      id: 3
+      label: PWA
+    -
+      id: 4
+      label: English
+    -
+      id: 5
+      label: Portfolio
+    -
+      id: 6
+      label: Cloud Architecture Certificate
+    -
+      id: 7
+      label: Secure Delivery Practitioner
+    -
+      id: 8
+      label: Platform engineering
+    -
+      id: 9
+      label: Infrastructure as code
+    -
+      id: 10
+      label: Cloud architecture
+    -
+      id: 11
+      label: Observability
+    -
+      id: 12
+      label: DevSecOps

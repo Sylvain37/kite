@@ -43,7 +43,7 @@ All application paths are relative, so Kite can be hosted at the root of a domai
 
 GitHub Pages currently sends `Cache-Control: max-age=600` for this site's JavaScript and CSS. Repository files and the Service Worker cannot change that HTTP response header for first visits. To use longer browser cache lifetimes, host the static files behind a server or CDN that lets you set response headers. Give fingerprinted JS/CSS asset URLs a long lifetime such as `public, max-age=31536000, immutable`, and keep `index.html` and `sw.js` short lived so visitors discover releases. A longer lifetime on Kite's current unversioned JS/CSS URLs would risk stale modules after deployment. Continue increasing the visible app version and `CACHE_VERSION` together for each release.
 
-The bundled `data/default.yml` contains a deliberately fictional CV (`Camille EXAMPLE`) with `example.com` contact links and generated placeholder illustrations. Keep demonstration content fictional when changing it, and still review every bundled file before publishing because GitHub Pages makes the published site content public.
+The bundled `data/template.yml` contains a deliberately fictional CV (`Camille EXAMPLE`) with `example.com` contact links and generated placeholder illustrations. Kite first tries the optional `data/data.yml` user document, then falls back to this template. `data/data.yml` is ignored by Git and is never included in a release; deploy it separately when persistent user data is wanted. Keep demonstration content fictional when changing it, and still review every bundled file before publishing because GitHub Pages makes the published site content public.
 
 ## Install the PWA
 
@@ -87,7 +87,7 @@ index.html                    Static, English canonical UI shell
 css/                          Screen structure and responsive layout only
 js/extensions/themes/core/, selene/  Complete visual styles for each theme
 config/kite.json              Foundation modules and defaults
-data/default.yml              Bundled fictional demonstration document, canonical English data
+data/template.yml              Bundled fictional demonstration document, canonical English data
 js/main.js                    Startup, application controller and document rendering
 js/app/wizard.js              Add-item editor, imported on first use
 js/i18n.js                    Locale catalogue plus UI and exact-term translations
@@ -127,7 +127,7 @@ Avoid abbreviations that obscure intent. Reusable behaviour belongs in `js/share
 - `TRANSLATIONS`, which stores application messages by semantic key, currently with `en` and `fr` variants;
 - `TERM_TRANSLATIONS`, which stores exact canonical data/metadata values and their locale equivalents, including CV section titles such as `Languages ↔ Langues` and `Courses ↔ Formations`.
 
-English is the source-of-truth language in HTML, JavaScript and `data/default.yml`, and it is also the first-visit default (`DEFAULT_LOCALE = "en"` with `<html lang="en">`). **Settings → Language** is generated from `LOCALES`; selecting a language updates `<html lang>`, retranslates the current UI without a reload and stores the choice as `kite.locale` in `localStorage`. A stored locale preference takes precedence on subsequent visits.
+English is the source-of-truth language in HTML, JavaScript and `data/template.yml`, and it is also the first-visit default (`DEFAULT_LOCALE = "en"` with `<html lang="en">`). **Settings → Language** is generated from `LOCALES`; selecting a language updates `<html lang>`, retranslates the current UI without a reload and stores the choice as `kite.locale` in `localStorage`. A stored locale preference takes precedence on subsequent visits.
 
 Unknown imported user data is never automatically rewritten: `translateTerm()` translates only exact known terms and otherwise returns the original value. On a locale change, Kite rebuilds the active adapter views before repainting them, so plugin-generated labels are recalculated in the target language rather than being frozen in the locale that was active when the document first loaded.
 

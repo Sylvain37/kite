@@ -10,7 +10,7 @@ This document is a self-contained prompt intended for a capable coding agent. It
 - Reasoning effort used for this maintenance pass: **High**
 - Agent role: **front-end/PWA code-maintenance agent with local repository editing and validation tools**
 - Reference date: **2026-09-17**
-- Target Kite release: **v0.5.133**
+- Target Kite release: **v0.5.185**
 - Execution context used for maintenance: a Linux sandbox with filesystem/shell access, Python and Node.js available for validation; the application itself must not depend on those tools at runtime.
 - Reproducibility boundary: hidden chain-of-thought, private system prompts and platform-internal instructions are not application dependencies and must not be required. The generated repository must be justified by explicit source files, comments and executable/browser-visible behaviour.
 
@@ -69,7 +69,7 @@ kite/
     settings.css
     wizard.css
   data/
-    default.yml
+    template.yml
   docs/
     GENERATE.md
   images/
@@ -244,7 +244,7 @@ Document layout plugins:
 
 # 12. Config
 
-`config/kite.json` points to `./data/default.yml`, loads the YAML codec, Core and Selene themes, and the two layout foundation modules. It defaults to theme `core`, color mode `system` and layout `classic`.
+`config/kite.json` declares `./data/data.yml` as the optional user document and `./data/template.yml` as the shipped fallback. It loads the YAML codec, Core and Selene themes, and the two layout foundation modules. It defaults to theme `core`, color mode `system` and layout `classic`.
 
 # 13. i18n policy
 
@@ -299,7 +299,7 @@ At minimum provide EN/FR variants for every UI phrase needed by:
 - CV wizard type/main/additional info, placeholders, image uploader copy;
 - import/save/image/startup/validation errors and toasts.
 
-TERM_TRANSLATIONS must include the exact English terms in the bundled `default.yml` that have a French rendering, including at minimum:
+TERM_TRANSLATIONS must include the exact English terms in the bundled `template.yml` that have a French rendering, including at minimum:
 - on site -> sur site
 - hybrid -> hybride
 - self-employed -> freelance
@@ -387,7 +387,7 @@ On start:
 State includes config, active adapter/model/view, active content sections, active section, source filename, selected tag, search query, statistics visibility, wizard step and unsaved-change badge counts.
 
 Required UI behaviour:
-- Settings places the document title in bold, the translated quote in italics, `· v0.5.133 ·`, and the GitHub link below a separator after the data management controls.
+- Settings places the document title in bold, the translated quote in italics, `· v0.5.185 ·`, and the GitHub link below a separator after the data management controls.
 - Search is diacritic-insensitive and matches both canonical and localised exact terms.
 - Render the active content sections as a keyboard-operable tab menu in `contextMenu` above `tagsTitle`, including when the active section has no tags. Use a horizontal row in narrow `classic` and a vertical menu otherwise.
 - Each menu row keeps its item count aligned to the right; arrow keys/Home/End move among sections.
@@ -484,7 +484,7 @@ Save:
 - context menu with a Settings button beside the section menu on wide screens and narrow Core screens; on narrow Selene screens Settings moves into the search/Add row above active content;
 - content shell with context menu and active content;
 - empty active content state;
-- document title, quote, release `v0.5.133` and GitHub link in `app-info`, placed in its own Settings section after the data controls;
+- document title, quote, release `v0.5.185` and GitHub link in `app-info`, placed in its own Settings section after the data controls;
 - toast region;
 - an early inline bootstrap that sets theme, color, layout and language before the first paint, loads only the selected theme/layout stylesheets, and positions the narrow Selene Settings button;
 - one module script `./js/main.js`.
@@ -527,7 +527,7 @@ Use CSS custom properties for theme tokens. Use kebab-case classes. Add short se
 
 # 19. Bundled document
 
-Create `data/default.yml` using canonical English values and declare both business plugins version 1.0.0.
+Create `data/template.yml` using canonical English values and declare both business plugins version 1.0.0.
 
 It must include:
 
@@ -689,7 +689,7 @@ GitHub Pages controls the HTTP `Cache-Control` header for JS/CSS (currently `max
 # 22. Service worker
 
 `sw.js`:
-- `CACHE_VERSION = "v0.5.133"`;
+- `CACHE_VERSION = "v0.5.185"`;
 - precache the complete shell including optional feature styles, theme/layout styles, the wizard module and shared modules;
 - installation: cache shell and skipWaiting;
 - activation: delete older caches and claim clients;
@@ -736,10 +736,10 @@ A. Static/syntax
 - source identifiers follow the naming conventions.
 
 B. YAML
-- the local codec parses `data/default.yml`;
+- the local codec parses `data/template.yml`;
 - the bundled CV contains only the specified fictional/example identity, contacts, organisations and generated placeholder illustrations;
 - no legacy real CV identity, employer/client, phone, email, social URL or portrait data remains anywhere in application source, bundled data or this generation specification;
-- stringify(parse(default.yml)) parses again;
+- stringify(parse(template.yml)) parses again;
 - both bookmarks and cv adapters positively probe the parsed default document;
 - declared plugin versions match manifests.
 

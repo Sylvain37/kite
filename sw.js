@@ -4,7 +4,7 @@
  * The service worker uses a stale-while-revalidate strategy for same-origin GET
  * requests. Bump CACHE_VERSION whenever a release changes shell resources.
  */
-const CACHE_VERSION = "v0.5.133";
+const CACHE_VERSION = "v0.5.185";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -12,7 +12,7 @@ const APP_SHELL = [
   "./css/settings.css",
   "./css/wizard.css",
   "./config/kite.json",
-  "./data/default.yml",
+  "./data/template.yml",
   "./site.webmanifest",
   "./js/main.js",
   "./js/app/wizard.js",
@@ -40,6 +40,28 @@ const APP_SHELL = [
   "./js/plugins/bookmarks/plugin.js",
   "./js/plugins/cv/plugin.js",
   "./js/plugins/directory/plugin.js",
+  "./js/plugins/writer/plugin.js",
+  "./js/plugins/writer/renderer.js",
+  "./js/vendor/mermaid.min.js",
+  "./js/vendor/highlight/highlight.min.js",
+  "./js/vendor/highlight/powershell.min.js",
+  "./js/vendor/highlight/default.min.css",
+  "./js/vendor/markdown/markdown-it.min.js",
+  "./js/vendor/markdown/markdown-it-task-lists.min.js",
+  "./js/vendor/markdown/markdown-it-footnote.min.js",
+  "./js/vendor/markdown/markdown-it-deflist.min.js",
+  "./js/vendor/markdown/markdown-it-mark.min.js",
+  "./js/vendor/markdown/markdown-it-sub.min.js",
+  "./js/vendor/markdown/markdown-it-sup.min.js",
+  "./js/vendor/katex/katex.min.js",
+  "./js/vendor/katex/katex.min.css",
+  "./js/vendor/katex/fonts/KaTeX_Main-Regular.woff2",
+  "./js/vendor/katex/fonts/KaTeX_Main-Italic.woff2",
+  "./js/vendor/katex/fonts/KaTeX_Math-Italic.woff2",
+  "./js/vendor/katex/fonts/KaTeX_Size1-Regular.woff2",
+  "./js/vendor/katex/fonts/KaTeX_Size2-Regular.woff2",
+  "./js/vendor/katex/fonts/KaTeX_Size3-Regular.woff2",
+  "./js/vendor/katex/fonts/KaTeX_Size4-Regular.woff2",
   "./images/favicon.svg",
   "./images/favicon.ico",
   "./images/favicon-16x16.png",
@@ -72,6 +94,12 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+
+  // User data is optional and must never become part of the application shell cache.
+  if (url.pathname.endsWith("/data/data.yml")) {
+    event.respondWith(fetch(request));
+    return;
+  }
 
   event.respondWith((async () => {
     const cached = await caches.match(request);
