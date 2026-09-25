@@ -1,3 +1,5 @@
+![GitHub release](https://img.shields.io/github/release/Sylvain37/kite.svg) - ![GitHub top language](https://img.shields.io/github/languages/top/Sylvain37/kite) - ![GitHub Workflow Status](https://img.shields.io/github/workflow/status/Sylvain37/kite/main.svg)
+
 # Kite
 
 Kite is a lightweight, installable and extensible Progressive Web App for exploring, searching, editing, importing and exporting structured YAML documents directly in the browser.
