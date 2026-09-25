@@ -144,7 +144,12 @@ button, select { cursor: pointer; }
 .writer-preview img, .writer-preview svg { max-width: 100%; height: auto; }
 .writer-diagram { padding: 12px; overflow: auto; color: var(--inactive-primary); background: var(--landscape-filled-surface, var(--landscape-filled)); border: 1px solid var(--landscape-delimited); border-radius: var(--radius); }
 .writer-diagram svg { display: block; min-width: 100%; }
-.writer-preview pre { position: relative; overflow: auto; }
+.writer-preview pre { position: relative; box-sizing: border-box; max-width: 100%; min-width: 0; margin-inline: 0; overflow: auto; }
+.writer-preview blockquote,
+.writer-callout,
+.writer-multiline-quote,
+.writer-frontmatter { box-sizing: border-box; max-width: 100%; min-width: 0; margin-inline: 0; overflow-wrap: anywhere; }
+.writer-preview pre > code { white-space: pre-wrap; overflow-wrap: anywhere; }
 .writer-code-copy { position: absolute; top: 8px; right: 8px; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; }
 .writer-code-copy svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .writer-export-actions { display: flex; flex-wrap: wrap; gap: 8px; }
